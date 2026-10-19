@@ -8,7 +8,7 @@ import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker, bundleWorkflowCode, DefaultLogger, Runtime, type WorkflowBundle } from "@temporalio/worker";
 import { createOtlpSpanExporter, type SpanExporter } from "@space/runtime";
 import { workflowTracingOptions, workerSpanAttributes } from "../src/workflow-tracing-worker.js";
-import { createActivityObservabilityInterceptors } from "../src/activity-observability.js";
+import { childTraceparent, createActivityObservabilityInterceptors } from "../src/activity-observability.js";
 import { traceInput, workflowSpanId } from "../src/workflow-trace-context.js";
 import { createRequestTraceContext, TraceContextRegistry, withTurnTraceparent, workflowCorrelationMemo } from "../../api/src/trace-context.js";
 
@@ -91,9 +91,15 @@ describe("connected Temporal tracing", () => {
 
   it("connects an actual HTTP request, production workflow, and each retry attempt; replay exports nothing", async () => {
     const queue = `trace-http-${++sequence}`; let attempts = 0; let handle: any;
-    const registry = new TraceContextRegistry(); let apiSpan: any;
+    const registry = new TraceContextRegistry(); let apiSpan: any; let actionSpan: any;
     const api = http.createServer(async (request, response) => {
       const context = createRequestTraceContext(request.headers.traceparent);
+      if (request.url === "/synthetic-action") {
+        actionSpan = { traceId: context.w3cTraceId, spanId: context.spanId, parentSpanId: context.parentSpanId,
+          name: "POST /synthetic-action", kind: 2, startTimeUnixNano: BigInt(Date.now()) * 1_000_000n,
+          endTimeUnixNano: BigInt(Date.now()) * 1_000_000n, attributes: { "http.request.method": "POST" }, error: false };
+        exporter.record(actionSpan); response.writeHead(202).end("{}"); return;
+      }
       registry.remember(turn.traceId, context);
       apiSpan = { traceId: context.w3cTraceId, spanId: context.spanId, parentSpanId: context.parentSpanId,
         name: "POST /synthetic-turn", kind: 2, startTimeUnixNano: BigInt(Date.now()) * 1_000_000n,
@@ -109,18 +115,25 @@ describe("connected Temporal tracing", () => {
     api.listen(0, "127.0.0.1"); await once(api, "listening");
     try { await worker(queue, {
       recordDummyTurnStarted: () => { if (++attempts === 1) throw Error(secret); },
-      recordDummyTurnCompleted: () => ({ status: "COMPLETED", message: secret })
+      recordDummyTurnCompleted: async () => {
+        const parent = childTraceparent(registry.lookup(turn.traceId)?.traceparent);
+        const response = await fetch(`http://127.0.0.1:${(api.address() as any).port}/synthetic-action`,
+          { method: "POST", headers: parent ? { traceparent: parent } : {} });
+        expect(response.status).toBe(202); return { status: "COMPLETED", message: secret };
+      }
     }, async () => {
       const response = await fetch(`http://127.0.0.1:${(api.address() as any).port}/synthetic-turn`, { method: "POST" });
       expect(response.status).toBe(202); expect(await handle.result()).toMatchObject({ status: "COMPLETED" });
       await exporter.flush(); const spans = emitted.filter(span => span.traceId === apiSpan.traceId);
-      expect(spans).toHaveLength(5);
+      expect(spans).toHaveLength(6);
       expect(new Set(spans.map(span => span.spanId)).size).toBe(spans.length);
       const root = spans.find(span => span.name === "workflow dummyTurnWorkflow");
       expect(root).toBeDefined(); expect(root.parentSpanId).toBe(apiSpan.spanId);
       const activities = spans.filter(span => span.name.startsWith("activity "));
       expect(activities).toHaveLength(3);
       for (const activity of activities) expect(activity.parentSpanId).toBe(root.spanId);
+      expect(actionSpan.traceId).toBe(apiSpan.traceId);
+      expect(actionSpan.parentSpanId).toBe(activities.find(span => span.name === "activity recordDummyTurnCompleted").spanId);
       const attributes = (span: any) => Object.fromEntries(span.attributes.map((a: any) => [a.key, a.value.intValue ?? a.value.stringValue]));
       expect(activities.filter(span => span.name === "activity recordDummyTurnStarted").map(span => attributes(span)["space.attempt"]).sort()).toEqual(["1", "2"]);
       expect(JSON.stringify(spans)).not.toContain(secret); expect(JSON.stringify(spans)).not.toContain("private.example");

@@ -236,8 +236,10 @@ and a three-second POST timeout. Overflow and collector failures are counted by
   than a synthetic unexported child. Dot Goal and memory coordinators also put
   the request context into the starter memo without adding database columns.
 - **Worker:** worker logs read the trace ID from the activity input. Internal
-  room-action calls from the worker send a child `traceparent`, so the internal
-  API request joins the same trace.
+  room-action calls from an observed activity propagate that actual activity
+  attempt's span as `traceparent`, so the internal API SERVER span has an
+  exported parent rather than an invented intermediate ID. Async-local context
+  keeps concurrent activities separate.
 - **Workflow spans:** workflow interceptors read validated Temporal headers,
   falling back to input and memo. Activity and child-workflow headers carry the
   exact workflow span as parent, including across memory worker queues. Span IDs
@@ -282,7 +284,8 @@ SPACE_TRACE_PREVIEW_ENDPOINT=http://127.0.0.1:4318 npm test -w @space/worker -- 
 The fake collector asserts the real HTTP/Temporal span tree and optionally
 forwards that same synthetic OTLP JSON to this loopback-only preview endpoint.
 The synthetic Jaeger screenshot below shows the HTTP SERVER span, a completed production
-workflow and three activity attempts, including a failed attempt and its retry.
+workflow and three activity attempts, including a failed attempt and its retry,
+plus an internal HTTP request nested under the completing activity.
 
 ![Synthetic HTTP to Temporal trace in local Jaeger](../benchmarks/workflow-tracing-jaeger.png)
 

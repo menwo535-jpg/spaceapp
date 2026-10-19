@@ -32,6 +32,7 @@ export type ActivityOutcome = "COMPLETED" | "FAILED_RESULT" | "FAILED" | "CANCEL
 
 interface ActivityObservation {
   reasonCode: string | null;
+  spanTraceparent?: string | null;
 }
 
 const observations = new AsyncLocalStorage<ActivityObservation>();
@@ -57,9 +58,14 @@ export function failureReasonScope<T>(execute: () => Promise<T>): { promise: Pro
   return { promise: observations.run(observation, execute), reasonCode: () => observation.reasonCode };
 }
 
-/** traceparent for an outbound call: same W3C trace, new span id; null if none. */
+/** Outbound parent: the active exported attempt, or the legacy context when unobserved. */
 export function childTraceparent(traceparent: string | null | undefined): string | null {
   const parsed = parseTraceparent(traceparent);
+  const active = observations.getStore()?.spanTraceparent;
+  const activeParent = parseTraceparent(active);
+  // The outbound HTTP request is a child of this exported activity attempt,
+  // not of a newly invented span that no collector will ever receive.
+  if (activeParent && (!parsed || activeParent.traceId === parsed.traceId)) return active!;
   if (!parsed) return null;
   let spanId = randomBytes(8).toString("hex");
   while (/^0+$/.test(spanId)) spanId = randomBytes(8).toString("hex");
@@ -175,7 +181,10 @@ export async function observeActivityExecution<T>(
   if (queueMs !== null) metrics.activityScheduleToStart.observe(labels, queueMs / 1000);
   metrics.activitiesInFlight.inc(labels);
   workerLog("info", "activity.started", { ...base, queueMs });
-  const observation: ActivityObservation = { reasonCode: null };
+  const parent = dependencies.spans ? parseTraceparent(dependencies.parentTraceparent) ?? activityTraceparent(args) : null;
+  const spanId = parent ? randomBytes(8).toString("hex") : null;
+  const observation: ActivityObservation = { reasonCode: null,
+    spanTraceparent: parent && spanId ? formatTraceparent(parent.traceId, spanId, parent.flags) : null };
 
   const finish = (outcome: ActivityOutcome, reasonCode: string | null, errorName: string | null) => {
     const durationMs = Math.max(0, now() - startedAt);
@@ -197,11 +206,10 @@ export async function observeActivityExecution<T>(
       queueMs,
       rssBytes: process.memoryUsage().rss
     });
-    const parent = dependencies.spans ? parseTraceparent(dependencies.parentTraceparent) ?? activityTraceparent(args) : null;
-    if (parent) {
+    if (parent && spanId) {
       try { dependencies.spans!.record({
         traceId: parent.traceId,
-        spanId: randomBytes(8).toString("hex"),
+        spanId,
         parentSpanId: parent.parentId,
         name: `activity ${activityType}`,
         startTimeUnixNano: BigInt(startedAt) * 1_000_000n,
