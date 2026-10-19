@@ -15,14 +15,20 @@ const unit = (seed: string) => {
 
 /** Independent XYZ force layout. No coordinates are inherited from the 2D map. */
 export function layoutMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGraphEdge[]): Map<string, MemoryPoint3D> {
+  const steps = streamMemoryNetwork3D(nodes, edges);
+  for (;;) { const next = steps.next(); if (next.done) return next.value; }
+}
+
+export function* streamMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGraphEdge[]): Generator<{ step: number; positions: Map<string, MemoryPoint3D> }, Map<string, MemoryPoint3D>> {
   const ordered = [...nodes].sort((a, b) => a.id.localeCompare(b.id));
   const index = new Map(ordered.map((node, i) => [node.id, i]));
   const root = ordered.findIndex(node => node.type === "SOURCE" && isMemoryCoreLabel(node.label));
   const count = ordered.length;
+  const spread = 260 * Math.max(1, Math.cbrt(count / 2000));
   const points = ordered.map(node => ({
-    x: (unit(`${node.id}:x`) - 0.5) * 260,
-    y: (unit(`${node.id}:y`) - 0.5) * 260,
-    z: (unit(`${node.id}:z`) - 0.5) * 260
+    x: (unit(`${node.id}:x`) - 0.5) * spread,
+    y: (unit(`${node.id}:y`) - 0.5) * spread,
+    z: (unit(`${node.id}:z`) - 0.5) * spread
   }));
   if (root >= 0) points[root] = { x: 0, y: 0, z: 0 };
   const links = [...edges].sort((a, b) => a.id.localeCompare(b.id)).flatMap(edge => {
@@ -33,7 +39,7 @@ export function layoutMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGra
       strength: fileLink ? 0.035 : edge.type === "CONTAINS" ? 0.028 : 0.004 }];
   });
   // Initialize records around their actual file, in a volume rather than a plane.
-  for (const edge of edges) {
+  for (const edge of [...edges].sort((a, b) => a.id.localeCompare(b.id))) {
     const a = index.get(edge.source), b = index.get(edge.target);
     if (edge.type !== "CONTAINS" || a === undefined || b === undefined || ordered[a]!.type !== "SOURCE" || ordered[b]!.type !== "MEMORY") continue;
     const parent = points[a]!, id = ordered[b]!.id;
@@ -41,6 +47,8 @@ export function layoutMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGra
       y: parent.y + (unit(`${id}:dy`) - 0.5) * 70, z: parent.z + (unit(`${id}:dz`) - 0.5) * 70 };
   }
   const fx = new Float64Array(count), fy = new Float64Array(count), fz = new Float64Array(count);
+  const snapshot = () => new Map(ordered.map((node, i) => [node.id, { ...points[i]! }]));
+  yield { step: 0, positions: snapshot() };
   // Bounded spatial-grid repulsion and link springs act equally on all three axes.
   for (let step = 0; step < 180; step++) {
     fx.fill(0); fy.fill(0); fz.fill(0);
@@ -50,10 +58,28 @@ export function layoutMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGra
       if (!grid.has(key)) grid.set(key, []);
       grid.get(key)!.push(i);
     }
+    // Dense archive cells use their centroid rather than quadratic all-pairs work.
+    // Small graphs retain the existing force law exactly.
+    const centers = new Map<string, { x: number; y: number; z: number; count: number }>();
+    if (count > 2000) for (const [key, bucket] of grid) {
+      if (bucket.length <= 32) continue;
+      const center = { x: 0, y: 0, z: 0, count: bucket.length };
+      for (const j of bucket) { center.x += points[j]!.x; center.y += points[j]!.y; center.z += points[j]!.z; }
+      centers.set(key, center);
+    }
     for (let i = 0; i < count; i++) {
       const p = points[i]!, gx = Math.floor(p.x / 32), gy = Math.floor(p.y / 32), gz = Math.floor(p.z / 32);
       for (let x = gx - 1; x <= gx + 1; x++) for (let y = gy - 1; y <= gy + 1; y++) for (let z = gz - 1; z <= gz + 1; z++) {
-        for (const j of grid.get(`${x},${y},${z}`) ?? []) {
+        const key = `${x},${y},${z}`, center = centers.get(key);
+        if (center) {
+          const own = Number(x === gx && y === gy && z === gz), weight = center.count - own;
+          if (!weight) continue;
+          const dx = p.x - (center.x - own * p.x) / weight, dy = p.y - (center.y - own * p.y) / weight, dz = p.z - (center.z - own * p.z) / weight;
+          const strength = 12 * weight / Math.max(1, dx * dx + dy * dy + dz * dz);
+          fx[i]! += dx * strength; fy[i]! += dy * strength; fz[i]! += dz * strength;
+          continue;
+        }
+        for (const j of grid.get(key) ?? []) {
           if (j <= i) continue;
           const q = points[j]!, dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
           const distanceSquared = Math.max(1, dx * dx + dy * dy + dz * dz);
@@ -78,8 +104,9 @@ export function layoutMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGra
       const stepScale = Math.min(1, 4 / Math.max(0.01, Math.hypot(dx, dy, dz))) * cooling;
       p.x += dx * stepScale; p.y += dy * stepScale; p.z += dz * stepScale;
     }
+    if ((step + 1) % 12 === 0) yield { step: step + 1, positions: snapshot() };
   }
-  return new Map(ordered.map((node, i) => [node.id, points[i]!]));
+  return snapshot();
 }
 
 export function projectMemoryPoint(point: MemoryPoint3D, camera: MemoryCamera3D, scale: number, width: number, height: number) {
@@ -92,7 +119,19 @@ export function projectMemoryPoint(point: MemoryPoint3D, camera: MemoryCamera3D,
 }
 
 /** Normalized covariance determinant: 0 for a plane, 1 for equal spread in XYZ. */
-export function memory3DVolumeRatio(points: MemoryPoint3D[]): number {
+export function memory3DVolumeRatio(points: MemoryPoint3D[] | Float32Array): number {
+  if (points instanceof Float32Array) {
+    const count = points.length / 3;
+    if (count < 4) return 0;
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < points.length; i += 3) { cx += points[i]! / count; cy += points[i + 1]! / count; cz += points[i + 2]! / count; }
+    let xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
+    for (let i = 0; i < points.length; i += 3) {
+      const x = points[i]! - cx, y = points[i + 1]! - cy, z = points[i + 2]! - cz;
+      xx += x * x; yy += y * y; zz += z * z; xy += x * y; xz += x * z; yz += y * z;
+    }
+    return Math.max(0, (xx * yy * zz + 2 * xy * xz * yz - xx * yz * yz - yy * xz * xz - zz * xy * xy) / Math.max(1e-12, ((xx + yy + zz) / 3) ** 3));
+  }
   if (points.length < 4) return 0;
   const center = points.reduce((sum, p) => ({ x: sum.x + p.x / points.length, y: sum.y + p.y / points.length, z: sum.z + p.z / points.length }), { x: 0, y: 0, z: 0 });
   let xx = 0, yy = 0, zz = 0, xy = 0, xz = 0, yz = 0;
