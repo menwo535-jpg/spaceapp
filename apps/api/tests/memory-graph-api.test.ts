@@ -438,7 +438,8 @@ describe("Memory graph API", () => {
       expect(standard.json().data.edges.length).toBeLessThanOrEqual(6000);
       for (const limit of ["0", "50001", "1.5", "invalid"]) {
         const response = await app.inject({ method: "GET", url: `/api/admin/memory/graph/overview?limit=${limit}`, headers: { cookie } });
-        expect(response.statusCode).toBe(400);
+        expect(response.statusCode).toBe(422);
+        expect(response.json().error.code).toBe("VALIDATION_ERROR");
       }
       expect((await app.inject({ method: "GET", url: "/api/admin/memory/graph/overview?limit=50000" })).statusCode).toBe(401);
       const member = signSession({ id: "user:member", email: "member@space.test", role: "USER" }, sessionSecret);

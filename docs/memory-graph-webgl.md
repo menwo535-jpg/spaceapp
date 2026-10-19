@@ -78,10 +78,15 @@ Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 | Initial GPU readback picking | 50,000 / 150,000 | 1279.5 x 658.1 | 1.5 | 42.5 ms | 39.8 ms |
 | Indexed picking, small graph | 2,000 / 6,000 | 1279.5 x 658.1 | 1.5 | 6.2 ms | <0.1 ms |
 | Batched edges, before dense-graph ratio cap | 50,000 / 150,000 | 1666 x 697 | 1.5 | 36.4 ms | 0.1 ms |
+| Dense graph ratio cap (current) | 50,000 / 150,000 | 1666 x 697 | 1.0 | 24.3 ms | 0.1 ms |
 
-The last large-graph result above does **not** meet the requested 33 ms P95.
-The current dense-graph ratio cap is awaiting a fresh measurement. Raw browser
-measurements must accompany a qualifying performance claim.
+The current large-graph run, recorded at `2026-10-19T17:49:50.684Z`, meets the
+requested 33 ms frame P95 and 4 ms picking P95 on this hardware. It had no
+observed load/layout or benchmark main-thread long tasks. Its frame median was
+12.2 ms, maximum 36.4 ms, CPU enqueue P95 2.6 ms, and picking maximum 0.2 ms.
+The device and label ratios were both 1.5; only graph primitives used ratio 1.
+The table retains unsuccessful configurations to make that tradeoff explicit.
+Raw browser measurements must accompany a qualifying performance claim.
 
 The current affected web suite has 58 passing tests, including worker transfer,
 schema-valid synthetic data, indexed picking against a depth-aware reference,
