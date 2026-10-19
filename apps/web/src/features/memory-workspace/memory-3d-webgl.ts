@@ -27,7 +27,7 @@ out vec2 v_disc;
 out vec4 v_color;
 ${cameraShader}
 void main() {
-  vec2 quad[6] = vec2[6](vec2(-1,-1), vec2(1,-1), vec2(-1,1), vec2(-1,1), vec2(1,-1), vec2(1,1));
+  vec2 quad[4] = vec2[4](vec2(-1,-1), vec2(1,-1), vec2(-1,1), vec2(1,1));
   vec4 p = projectPoint(a_position);
   bool focused = gl_InstanceID == u_focus;
   float radius = max(1.0, a_radius * p.w * sqrt(u_zoom)) * (focused ? 1.5 : 1.0);
@@ -53,13 +53,12 @@ precision highp int;
 layout(location=0) in ivec2 a_indices;
 layout(location=1) in float a_kind;
 uniform sampler2D u_positions;
-uniform int u_textureWidth;
 uniform int u_focus;
 out vec4 v_color;
 ${cameraShader}
 void main() {
   int index = a_indices.x;
-  vec3 position = texelFetch(u_positions, ivec2(index % u_textureWidth, index / u_textureWidth), 0).xyz;
+  vec3 position = texelFetch(u_positions, ivec2(index & 1023, index >> 10), 0).xyz;
   vec4 point = projectPoint(position);
   gl_Position = vec4(point.xyz, 1.0);
   bool incident = a_indices.x == u_focus || a_indices.y == u_focus;
@@ -119,7 +118,9 @@ export class MemoryWebGLRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, edgeKinds);
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 4, 0);
     gl.bindVertexArray(null);
-    this.textureWidth = Math.min(1024, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number);
+    // WebGL2 guarantees at least 2048. A fixed power-of-two row lets the
+    // vertex shader address 50k endpoints without integer division.
+    this.textureWidth = 1024;
     this.positionTexture = object(gl.createTexture());
     for (const texture of [this.positionTexture]) {
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -219,13 +220,14 @@ export class MemoryWebGLRenderer {
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.clearColor(0, 0, 0, 0); gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Seed depth with the node discs before rasterizing dense crossing lines.
+    // This lets early depth rejection avoid shading edges hidden behind nodes.
+    this.camera(this.nodeProgram, camera);
+    gl.bindVertexArray(this.nodeVao); gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
     this.camera(this.edgeProgram, camera);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.positionTexture);
     gl.uniform1i(this.uniform(this.edgeProgram, "u_positions"), 0);
-    gl.uniform1i(this.uniform(this.edgeProgram, "u_textureWidth"), this.textureWidth);
     gl.bindVertexArray(this.edgeVao); gl.drawArrays(gl.LINES, 0, this.model.edgeKinds.length * 2);
-    this.camera(this.nodeProgram, camera);
-    gl.bindVertexArray(this.nodeVao); gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
     gl.bindVertexArray(null);
   }
   pick(x: number, y: number): number {

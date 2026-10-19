@@ -196,7 +196,9 @@ export function MemoryGraph3D(props: Props) {
     setBenchmarkRunning(true); setBenchmarkResult(""); setBenchmarkProgress(0);
     benchmarkRun.current = new MemoryBenchmarkSession({ nodes: model.nodes.length, edges: model.edgeKinds.length, renderer: gpuName.current, viewport: [rect.width, rect.height], dpr: canvasRef.current!.width / rect.width,
       devicePixelRatio: window.devicePixelRatio || 1, labelPixelRatio: labelsRef.current!.width / rect.width,
-      loadLongTasksMs: longTasks.current.filter(task => task.start >= loadStarted.current && task.start <= loadFinished.current).map(task => task.duration) }, result => setBenchmarkResult(JSON.stringify(result, null, 2)), setBenchmarkProgress);
+      loadLongTasksMs: [] }, result => setBenchmarkResult(JSON.stringify({ ...result,
+        loadLongTasksMs: longTasks.current.filter(task => task.start >= loadStarted.current && task.start <= loadFinished.current).map(task => task.duration)
+      }, null, 2)), setBenchmarkProgress);
     redrawRef.current();
   };
 

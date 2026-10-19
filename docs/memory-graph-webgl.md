@@ -9,8 +9,9 @@ and source filtering remain in the route.
 
 ## Renderer and interaction
 
-- Nodes are instanced signed-distance discs, with the existing atlas colors
-  and source/core sizes. GPU depth testing handles occlusion.
+- Nodes are instanced four-vertex signed-distance discs, with the existing atlas
+  colors and source/core sizes. They establish GPU depth before the edge batch,
+  allowing hidden line fragments to be rejected early.
 - Edges are one vertex batch. Their endpoint positions come from a float
   texture, so a layout update uploads node coordinates rather than rebuilding
   150,000 line geometries. Camera rotation is a matrix uniform update.
@@ -78,15 +79,22 @@ Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 | Initial GPU readback picking | 50,000 / 150,000 | 1279.5 x 658.1 | 1.5 | 42.5 ms | 39.8 ms |
 | Indexed picking, small graph | 2,000 / 6,000 | 1279.5 x 658.1 | 1.5 | 6.2 ms | <0.1 ms |
 | Batched edges, before dense-graph ratio cap | 50,000 / 150,000 | 1666 x 697 | 1.5 | 36.4 ms | 0.1 ms |
-| Dense graph ratio cap (current) | 50,000 / 150,000 | 1666 x 697 | 1.0 | 24.3 ms | 0.1 ms |
-| Small graph (current, same viewport) | 2,000 / 6,000 | 1666 x 697 | 1.5 | 12.2 ms | <0.1 ms |
+| Dense graph ratio cap, development | 50,000 / 150,000 | 1666 x 697 | 1.0 | 24.3 ms | 0.1 ms |
+| First production repeat, before node-first depth | 50,000 / 150,000 | 1666 x 697 | 1.0 | 36.6 ms | 0.1 ms |
+| Node-first depth, four-vertex strips, production | 50,000 / 150,000 | 1666 x 697 | 1.0 | 18.3 ms | 0.1 ms |
+| Same production configuration, independent repeat | 50,000 / 150,000 | 1666 x 697 | 1.0 | 18.3 ms | 0.1 ms |
+| Small graph, final production | 2,000 / 6,000 | 1666 x 697 | 1.5 | 12.2 ms | <0.1 ms |
 
-The current large-graph run, recorded at `2026-10-19T17:49:50.684Z`, meets the
-requested 33 ms frame P95 and 4 ms picking P95 on this hardware. It had no
-observed load/layout or benchmark main-thread long tasks. Its frame median was
-12.2 ms, maximum 36.4 ms, CPU enqueue P95 2.6 ms, and picking maximum 0.2 ms.
+The final production large-graph runs, recorded at `2026-10-19T18:10:52.686Z`
+and `2026-10-19T18:13:05.991Z`, meet the requested 33 ms frame P95 and 4 ms
+picking P95 on this hardware. Neither observed load/layout or benchmark
+main-thread long tasks. Their frame medians were 12.2 ms, maxima 48.6/30.4 ms,
+CPU enqueue P95 6.4/5.8 ms, and picking maxima 0.2 ms. The final production
+2,000-node run at `2026-10-19T18:24:10.703Z` measured 12.2 ms frame P95,
+meeting the 16.7 ms small-graph target, with no observed long tasks.
 The device and label ratios were both 1.5; only graph primitives used ratio 1.
-The table retains unsuccessful configurations to make that tradeoff explicit.
+The table retains unsuccessful configurations, including the failed production
+repeat after the initial development pass, to make that tradeoff explicit.
 Raw browser measurements must accompany a qualifying performance claim.
 
 The synthetic 50,000-node/150,000-edge API response measured 31,289,411 UTF-8
@@ -94,9 +102,11 @@ bytes. Two Ubuntu CI test requests took 742.94 ms and 919.3 ms, respectively,
 including Fastify injection, server filtering, redaction, validation and
 serialization; these are server fixture timings, not end-to-end network latency.
 
-The current affected web suite has 58 passing tests, including worker transfer,
+The affected web suite has 58 passing tests, including worker transfer,
 schema-valid synthetic data, indexed picking against a depth-aware reference,
-and context loss/recovery. The complete Linux architecture/typechecks passed.
-The first two Linux API runs exposed invalid test fixture provenance/identity
-fields; those fixtures have been corrected without relaxing production checks.
-Full API/public suites/build still need a successful run on the final commit.
+and context loss/recovery. At commit `ea6cfb2`, the complete Linux architecture
+and workspace typechecks, API/web regressions, all public test suites, all
+workspace builds and repository hygiene passed in workflow run `39297420132`,
+job `118218894701`. Final shader/reporting changes need the same checks on
+their final commit. Earlier invalid fixture provenance/identity and incorrect
+status expectations were corrected without relaxing production behavior.
