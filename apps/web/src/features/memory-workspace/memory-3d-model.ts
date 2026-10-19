@@ -71,4 +71,3 @@ export function memoryLabelCandidates(model: MemoryRenderModel, camera: MemoryCa
   }
   return candidates;
 }
-

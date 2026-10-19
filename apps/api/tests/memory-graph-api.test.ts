@@ -443,7 +443,10 @@ describe("Memory graph API", () => {
       }
       expect((await app.inject({ method: "GET", url: "/api/admin/memory/graph/overview?limit=50000" })).statusCode).toBe(401);
       const member = signSession({ id: "user:member", email: "member@space.test", role: "USER" }, sessionSecret);
-      expect((await app.inject({ method: "GET", url: "/api/admin/memory/graph/overview?limit=50000", headers: { cookie: `space_session=${member}` } })).statusCode).toBe(403);
+      const refused = await app.inject({ method: "GET", url: "/api/admin/memory/graph/overview?limit=50000", headers: { cookie: `space_session=${member}` } });
+      // The existing owned-resource guard conceals operator-only endpoints.
+      expect(refused.statusCode).toBe(404);
+      expect(refused.json().error.code).toBe("NOT_FOUND");
     } finally { await app.close(); }
   });
 

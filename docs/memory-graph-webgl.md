@@ -79,6 +79,7 @@ Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 | Indexed picking, small graph | 2,000 / 6,000 | 1279.5 x 658.1 | 1.5 | 6.2 ms | <0.1 ms |
 | Batched edges, before dense-graph ratio cap | 50,000 / 150,000 | 1666 x 697 | 1.5 | 36.4 ms | 0.1 ms |
 | Dense graph ratio cap (current) | 50,000 / 150,000 | 1666 x 697 | 1.0 | 24.3 ms | 0.1 ms |
+| Small graph (current, same viewport) | 2,000 / 6,000 | 1666 x 697 | 1.5 | 12.2 ms | <0.1 ms |
 
 The current large-graph run, recorded at `2026-10-19T17:49:50.684Z`, meets the
 requested 33 ms frame P95 and 4 ms picking P95 on this hardware. It had no
@@ -87,6 +88,11 @@ observed load/layout or benchmark main-thread long tasks. Its frame median was
 The device and label ratios were both 1.5; only graph primitives used ratio 1.
 The table retains unsuccessful configurations to make that tradeoff explicit.
 Raw browser measurements must accompany a qualifying performance claim.
+
+The synthetic 50,000-node/150,000-edge API response measured 31,289,411 UTF-8
+bytes. Two Ubuntu CI test requests took 742.94 ms and 919.3 ms, respectively,
+including Fastify injection, server filtering, redaction, validation and
+serialization; these are server fixture timings, not end-to-end network latency.
 
 The current affected web suite has 58 passing tests, including worker transfer,
 schema-valid synthetic data, indexed picking against a depth-aware reference,
