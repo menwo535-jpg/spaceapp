@@ -13,6 +13,8 @@ import {
 import type { SpanExporter } from "@space/runtime";
 import { logIdentifier, workerLog, type WorkerLogValue } from "./worker-log.js";
 import { workerMetrics, type WorkerMetrics } from "./worker-metrics.js";
+import { readTraceHeader } from "./workflow-trace-context.js";
+import { workerSpanAttributes } from "./workflow-tracing-worker.js";
 
 /**
  * One structured start/finish record and metrics per activity execution, with
@@ -137,6 +139,7 @@ export interface ObserveActivityDependencies {
   cancelled?: () => boolean;
   /** OTLP export (SPACE_OTEL_EXPORTER_OTLP_ENDPOINT): one span per activity whose input carries a traceparent. */
   spans?: SpanExporter | null;
+  parentTraceparent?: string | null;
 }
 
 function activityTraceparent(args: readonly unknown[]) {
@@ -194,19 +197,25 @@ export async function observeActivityExecution<T>(
       queueMs,
       rssBytes: process.memoryUsage().rss
     });
-    const parent = dependencies.spans ? activityTraceparent(args) : null;
+    const parent = dependencies.spans ? parseTraceparent(dependencies.parentTraceparent) ?? activityTraceparent(args) : null;
     if (parent) {
-      dependencies.spans!.record({
+      try { dependencies.spans!.record({
         traceId: parent.traceId,
         spanId: randomBytes(8).toString("hex"),
         parentSpanId: parent.parentId,
         name: `activity ${activityType}`,
         startTimeUnixNano: BigInt(startedAt) * 1_000_000n,
         endTimeUnixNano: BigInt(startedAt + durationMs) * 1_000_000n,
-        attributes: { "space.activity_type": activityType, "space.outcome": outcome, "space.attempt": info.attempt },
+        attributes: workerSpanAttributes({
+          ...Object.fromEntries(Object.entries(activityCorrelation(args)).map(([key, value]) => [`space.${key}`, value])),
+          "space.activity_type": activityType, "space.outcome": outcome, "space.attempt": info.attempt,
+          "space.workflow_type": info.workflowType, "space.workflow_id": info.workflowExecution?.workflowId,
+          "space.run_id": info.workflowExecution?.runId, "space.activity_id": info.activityId,
+          "space.reason_code": reasonCode, "space.category": category, "space.duration_ms": durationMs
+        }),
         error: outcome === "FAILED" || outcome === "FAILED_RESULT",
         kind: 1
-      });
+      }); } catch { /* Telemetry failure must not alter activity results. */ }
     }
   };
 
@@ -229,6 +238,7 @@ export function createActivityObservabilityInterceptors(dependencies: Omit<Obser
     inbound: {
       execute: (input, next) => observeActivityExecution(context.info, input.args, () => next(input), {
         ...dependencies,
+        parentTraceparent: readTraceHeader(input.headers),
         cancelled: () => context.cancellationSignal.aborted
       })
     }
