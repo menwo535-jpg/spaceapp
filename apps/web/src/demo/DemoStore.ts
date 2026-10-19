@@ -670,8 +670,7 @@ export class DemoStore {
     };
   }
 
-  private memoryGraph(query: DemoMemoryGraphQuery = {}): MemoryGraphPayload {
-    const base = this.fixture.memoryWorkspace.graph;
+  private memoryGraph(query: DemoMemoryGraphQuery = {}, base = this.fixture.memoryWorkspace.graph): MemoryGraphPayload {
     const needle = query.q?.trim().toLowerCase();
     const nodes = base.nodes.filter((node) => {
       const record = node.recordId ? this.fixture.memoryWorkspace.nodeDetails[node.id]?.record : null;
@@ -1499,8 +1498,8 @@ export class DemoStore {
       }
       case "memoryGraphOverview": {
         const requested = (args[0] ?? {}) as DemoMemoryGraphQuery;
-        if (requested.limit !== undefined) return Promise.resolve({ data: createSyntheticMemoryGraph(requested.limit) });
-        const graph = this.memoryGraph((args[0] ?? {}) as DemoMemoryGraphQuery);
+        const graph = this.memoryGraph(requested, requested.limit === undefined
+          ? this.fixture.memoryWorkspace.graph : createSyntheticMemoryGraph(requested.limit));
         return Promise.resolve({ data: { ...graph, totalMatchingNodes: graph.nodes.length, totalMatchingEdges: graph.edges.length, truncated: false } });
       }
       case "memoryCalendar": {

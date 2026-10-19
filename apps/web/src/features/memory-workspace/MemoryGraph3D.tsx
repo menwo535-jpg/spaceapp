@@ -63,11 +63,14 @@ export function MemoryGraph3D(props: Props) {
     if (props.benchmark) contextLossRef.current = gl.getExtension("WEBGL_lose_context");
     const labelContext = labels.getContext("2d");
     let animation = 0, width = 1, height = 1, hover = -1;
+    let hoverModel = current.current.model;
     const pointers = new Map<number, { x: number; y: number }>();
     let dragged = false, downX = 0, downY = 0;
     const render = (timestamp: number) => {
       animation = 0;
       const { model, showTitles, selectedNodeId } = current.current;
+      // Hover indices belong to a specific model, even when its size is unchanged.
+      if (hoverModel !== model) { hoverModel = model; hover = -1; canvas.style.cursor = "grab"; }
       const focus = hover >= 0 ? hover : model.index.get(selectedNodeId ?? "") ?? -1;
       const camera = cameraRef.current;
       benchmarkRun.current?.beforeDraw(timestamp, camera);
@@ -162,6 +165,10 @@ export function MemoryGraph3D(props: Props) {
       pointers.delete(event.pointerId); if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
     };
     const cancel = (event: PointerEvent) => { pointers.delete(event.pointerId); dragged = true; };
+    const leave = () => {
+      if (pointers.size) return;
+      hover = -1; canvas.style.cursor = "grab"; schedule();
+    };
     const wheel = (event: WheelEvent) => { event.preventDefault(); cameraRef.current.zoom = Math.max(0.35, Math.min(5, cameraRef.current.zoom * Math.exp(-event.deltaY * 0.001))); schedule(); };
     const key = (event: KeyboardEvent) => {
       const camera = cameraRef.current;
@@ -178,12 +185,14 @@ export function MemoryGraph3D(props: Props) {
     };
     const observer = new ResizeObserver(resize); observer.observe(canvas);
     canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move); canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", cancel);
+    canvas.addEventListener("pointerleave", leave);
     canvas.addEventListener("wheel", wheel, { passive: false }); canvas.addEventListener("keydown", key);
     return () => {
       observer.disconnect(); cancelAnimationFrame(animation); redrawRef.current = () => {}; resizeRef.current = () => {};
       canvas.removeEventListener("webglcontextlost", lost); canvas.removeEventListener("webglcontextrestored", activate);
       document.removeEventListener("visibilitychange", visibility);
       canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", cancel);
+      canvas.removeEventListener("pointerleave", leave);
       canvas.removeEventListener("wheel", wheel); canvas.removeEventListener("keydown", key);
       rendererRef.current?.dispose(); rendererRef.current = null;
       contextLossRef.current = null;
