@@ -1,0 +1,40 @@
+name: Verify memory graph patch
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Patch branch or commit to verify
+        required: true
+        default: menwo/memory-graph-webgl-62
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'menwo535-jpg/spaceapp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.21.1'
+          cache: npm
+      - name: Install locked dependencies
+        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci
+      - name: Install public test prerequisites
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep ffmpeg
+      - name: Architecture and all workspace typechecks
+        run: npm run check
+      - name: Memory graph API and web regression tests
+        run: |
+          npm test -w @space/api -- memory-graph-api
+          npm test -w @space/web -- memory
+      - name: Complete public test suites
+        run: npm test
+      - name: Build all workspaces
+        run: npm run build
+      - name: Check repository hygiene
+        run: npm run hygiene:preflight
