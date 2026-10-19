@@ -232,8 +232,7 @@ describe("Room Watchdog and Anti-Freeze Protection", () => {
     await wedgedPromise;
 
     // Also test recording room event directly in store
-    const watchdogEvent: Event = {
-      id: "event:watchdog-test",
+    const watchdogEvent: Parameters<InMemorySpaceStore["recordRoomEvent"]>[0] = {
       roomId: room.id,
       paneId: pane.id,
       turnId: null,
@@ -249,8 +248,7 @@ describe("Room Watchdog and Anti-Freeze Protection", () => {
         runtimeId: "cli:gemini",
         durationMs: 8000,
         killedAt: new Date().toISOString()
-      },
-      createdAt: new Date().toISOString()
+      }
     };
 
     // The store orders equal timestamps by ID, not insertion order. Make this
