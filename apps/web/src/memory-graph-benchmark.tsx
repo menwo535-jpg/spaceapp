@@ -25,11 +25,14 @@ function BenchmarkPage() {
     <p>Drag or use arrow keys to rotate. Scroll or use +/− to zoom. Click a node to select. Keep this tab visible during measurement.</p>
     {archive.error ? <p role="alert">{archive.error}</p> : null}
     <section className="memory-graph-benchmark-view" aria-label="Graph benchmark viewport" data-layout-ready={state?.complete === true}>
-      {state ? <MemoryGraph3D nodes={state.atlas.nodes} edges={state.atlas.edges} positions={state.atlas.positions} coordinates={EMPTY_DEPTH}
-        preparedModel={state.model} frame={state.frame} benchmark showTitles={titles} selectedNodeId={selected} onSelectNode={setSelected}
-        loading={!state.complete} resetToken={reset} /> : null}
+      <MemoryGraph3D nodes={state?.atlas.nodes ?? EMPTY_NODES} edges={state?.atlas.edges ?? EMPTY_EDGES} positions={state?.atlas.positions ?? EMPTY_POSITIONS} coordinates={EMPTY_DEPTH}
+        preparedModel={state?.model} frame={state?.frame} benchmark showTitles={titles} selectedNodeId={selected} onSelectNode={setSelected}
+        loading={!state?.complete} resetToken={reset} />
     </section>
   </main>;
 }
 const EMPTY_DEPTH = new Map<string, { x: number; y: number; z: number }>();
+const EMPTY_POSITIONS = new Map();
+const EMPTY_NODES: import("@space/contracts").MemoryGraphNode[] = [];
+const EMPTY_EDGES: import("@space/contracts").MemoryGraphEdge[] = [];
 createRoot(document.getElementById("root")!).render(<BenchmarkPage />);

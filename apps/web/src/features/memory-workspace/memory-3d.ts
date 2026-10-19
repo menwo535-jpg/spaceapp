@@ -47,20 +47,24 @@ export function* streamMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGr
       y: parent.y + (unit(`${id}:dy`) - 0.5) * 70, z: parent.z + (unit(`${id}:dz`) - 0.5) * 70 };
   }
   const fx = new Float64Array(count), fy = new Float64Array(count), fz = new Float64Array(count);
+  // With <=50k nodes and <=4 units per step for 180 steps, all cells stay
+  // within [-512, 511]. Exact numeric keys avoid millions of string allocations.
+  const cellKey = (x: number, y: number, z: number): string | number => count > 2000
+    ? (x + 512) * 1048576 + (y + 512) * 1024 + z + 512 : `${x},${y},${z}`;
   const snapshot = () => new Map(ordered.map((node, i) => [node.id, { ...points[i]! }]));
   yield { step: 0, positions: snapshot() };
   // Bounded spatial-grid repulsion and link springs act equally on all three axes.
   for (let step = 0; step < 180; step++) {
     fx.fill(0); fy.fill(0); fz.fill(0);
-    const grid = new Map<string, number[]>();
+    const grid = new Map<string | number, number[]>();
     for (let i = 0; i < count; i++) {
-      const p = points[i]!, key = `${Math.floor(p.x / 32)},${Math.floor(p.y / 32)},${Math.floor(p.z / 32)}`;
+      const p = points[i]!, key = cellKey(Math.floor(p.x / 32), Math.floor(p.y / 32), Math.floor(p.z / 32));
       if (!grid.has(key)) grid.set(key, []);
       grid.get(key)!.push(i);
     }
     // Dense archive cells use their centroid rather than quadratic all-pairs work.
     // Small graphs retain the existing force law exactly.
-    const centers = new Map<string, { x: number; y: number; z: number; count: number }>();
+    const centers = new Map<string | number, { x: number; y: number; z: number; count: number }>();
     if (count > 2000) for (const [key, bucket] of grid) {
       if (bucket.length <= 32) continue;
       const center = { x: 0, y: 0, z: 0, count: bucket.length };
@@ -70,7 +74,7 @@ export function* streamMemoryNetwork3D(nodes: MemoryGraphNode[], edges: MemoryGr
     for (let i = 0; i < count; i++) {
       const p = points[i]!, gx = Math.floor(p.x / 32), gy = Math.floor(p.y / 32), gz = Math.floor(p.z / 32);
       for (let x = gx - 1; x <= gx + 1; x++) for (let y = gy - 1; y <= gy + 1; y++) for (let z = gz - 1; z <= gz + 1; z++) {
-        const key = `${x},${y},${z}`, center = centers.get(key);
+        const key = cellKey(x, y, z), center = centers.get(key);
         if (center) {
           const own = Number(x === gx && y === gy && z === gz), weight = center.count - own;
           if (!weight) continue;

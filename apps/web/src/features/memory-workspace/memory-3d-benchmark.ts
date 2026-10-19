@@ -3,7 +3,7 @@ import type { MemoryWebGLRenderer } from "./memory-3d-webgl.js";
 
 export interface MemoryGraphBenchmark {
   nodes: number; edges: number; renderer: string; userAgent: string;
-  viewport: [number, number]; dpr: number; visibility: DocumentVisibilityState;
+  viewport: [number, number]; dpr: number; devicePixelRatio: number; labelPixelRatio: number; visibility: DocumentVisibilityState;
   samples: number; frameP95Ms: number; frameMedianMs: number; frameMaxMs: number;
   drawCpuP95Ms: number; pickingP95Ms: number; pickingMaxMs: number;
   loadLongTasksMs: number[]; benchmarkLongTasksMs: number[]; generatedAt: string;
@@ -22,7 +22,7 @@ export class MemoryBenchmarkSession {
   private drawCpu: number[] = [];
   readonly startedAt = performance.now();
 
-  constructor(private readonly input: Pick<MemoryGraphBenchmark, "nodes" | "edges" | "renderer" | "viewport" | "dpr" | "loadLongTasksMs">, private readonly finish: (result: MemoryGraphBenchmark) => void, private readonly progress?: (frames: number) => void) {}
+  constructor(private readonly input: Pick<MemoryGraphBenchmark, "nodes" | "edges" | "renderer" | "viewport" | "dpr" | "devicePixelRatio" | "labelPixelRatio" | "loadLongTasksMs">, private readonly finish: (result: MemoryGraphBenchmark) => void, private readonly progress?: (frames: number) => void) {}
 
   beforeDraw(timestamp: number, camera: MemoryCamera3D) {
     this.drawStarted = performance.now();

@@ -15,6 +15,7 @@ export function MemoryGraph3D(props: Props) {
   const contextLossRef = useRef<WEBGL_lose_context | null>(null);
   const cameraRef = useRef({ ...DEFAULT_MEMORY_CAMERA });
   const redrawRef = useRef<() => void>(() => {});
+  const resizeRef = useRef<() => void>(() => {});
   const [mode, setMode] = useState<"probing" | "webgl2" | "fallback">("probing");
   const [benchmarkResult, setBenchmarkResult] = useState("");
   const [benchmarkRunning, setBenchmarkRunning] = useState(false);
@@ -46,7 +47,7 @@ export function MemoryGraph3D(props: Props) {
     return () => observer.disconnect();
   }, [props.benchmark]);
   useEffect(() => { cameraRef.current = { ...DEFAULT_MEMORY_CAMERA }; redrawRef.current(); }, [resetToken]);
-  useEffect(() => { rendererRef.current?.setModel(model); redrawRef.current(); }, [model]);
+  useEffect(() => { rendererRef.current?.setModel(model); resizeRef.current(); redrawRef.current(); }, [model]);
   useEffect(() => {
     if (streamedFrame) rendererRef.current?.updatePositions(streamedFrame);
     redrawRef.current();
@@ -76,6 +77,7 @@ export function MemoryGraph3D(props: Props) {
         else schedule();
       }
       canvas.dataset.rotation = camera.yaw.toFixed(3) + "," + camera.pitch.toFixed(3);
+      canvas.dataset.zoom = camera.zoom.toFixed(3);
       if (!labelContext) return;
       labelContext.clearRect(0, 0, width, height);
       if (!showTitles) return;
@@ -100,11 +102,16 @@ export function MemoryGraph3D(props: Props) {
     redrawRef.current = schedule;
     const resize = () => {
       const rect = canvas.getBoundingClientRect(); width = Math.max(1, rect.width); height = Math.max(1, rect.height);
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = labels.width = Math.round(width * dpr); canvas.height = labels.height = Math.round(height * dpr);
-      labelContext?.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const labelDpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Dense graph primitives use one device pixel per CSS pixel. Keep labels
+      // sharp at the native ratio; small graphs retain their existing resolution.
+      const graphDpr = Math.min(labelDpr, current.current.model.nodes.length > 10000 ? 1 : 2);
+      canvas.width = Math.round(width * graphDpr); canvas.height = Math.round(height * graphDpr);
+      labels.width = Math.round(width * labelDpr); labels.height = Math.round(height * labelDpr);
+      labelContext?.setTransform(labelDpr, 0, 0, labelDpr, 0, 0);
       rendererRef.current?.resize(width, height); schedule();
     };
+    resizeRef.current = resize;
     const activate = () => {
       try {
         rendererRef.current?.dispose(); rendererRef.current = new MemoryWebGLRenderer(gl!);
@@ -117,7 +124,14 @@ export function MemoryGraph3D(props: Props) {
       event.preventDefault(); cancelAnimationFrame(animation); animation = 0;
       benchmarkRun.current = null; setBenchmarkRunning(false); setBenchmarkResult(""); setMode("fallback");
     };
+    const visibility = () => {
+      if (document.visibilityState === "hidden" && benchmarkRun.current) {
+        benchmarkRun.current = null; setBenchmarkRunning(false);
+        setBenchmarkResult("Measurement cancelled because the tab became hidden. Keep it visible and run again.");
+      }
+    };
     canvas.addEventListener("webglcontextlost", lost); canvas.addEventListener("webglcontextrestored", activate);
+    document.addEventListener("visibilitychange", visibility);
     activate();
     const local = (event: PointerEvent) => { const rect = canvas.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; };
     const hit = (x: number, y: number) => rendererRef.current?.pick(x, y) ?? -1;
@@ -166,8 +180,9 @@ export function MemoryGraph3D(props: Props) {
     canvas.addEventListener("pointerdown", down); canvas.addEventListener("pointermove", move); canvas.addEventListener("pointerup", up); canvas.addEventListener("pointercancel", cancel);
     canvas.addEventListener("wheel", wheel, { passive: false }); canvas.addEventListener("keydown", key);
     return () => {
-      observer.disconnect(); cancelAnimationFrame(animation); redrawRef.current = () => {};
+      observer.disconnect(); cancelAnimationFrame(animation); redrawRef.current = () => {}; resizeRef.current = () => {};
       canvas.removeEventListener("webglcontextlost", lost); canvas.removeEventListener("webglcontextrestored", activate);
+      document.removeEventListener("visibilitychange", visibility);
       canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", cancel);
       canvas.removeEventListener("wheel", wheel); canvas.removeEventListener("keydown", key);
       rendererRef.current?.dispose(); rendererRef.current = null;
@@ -179,7 +194,8 @@ export function MemoryGraph3D(props: Props) {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect || !rendererRef.current || benchmarkRun.current) return;
     setBenchmarkRunning(true); setBenchmarkResult(""); setBenchmarkProgress(0);
-    benchmarkRun.current = new MemoryBenchmarkSession({ nodes: model.nodes.length, edges: model.edgeKinds.length, renderer: gpuName.current, viewport: [rect.width, rect.height], dpr: Math.min(window.devicePixelRatio || 1, 2),
+    benchmarkRun.current = new MemoryBenchmarkSession({ nodes: model.nodes.length, edges: model.edgeKinds.length, renderer: gpuName.current, viewport: [rect.width, rect.height], dpr: canvasRef.current!.width / rect.width,
+      devicePixelRatio: window.devicePixelRatio || 1, labelPixelRatio: labelsRef.current!.width / rect.width,
       loadLongTasksMs: longTasks.current.filter(task => task.start >= loadStarted.current && task.start <= loadFinished.current).map(task => task.duration) }, result => setBenchmarkResult(JSON.stringify(result, null, 2)), setBenchmarkProgress);
     redrawRef.current();
   };
@@ -191,7 +207,10 @@ export function MemoryGraph3D(props: Props) {
       <canvas ref={labelsRef} className="memory-3d-labels" aria-hidden="true" />
       <span className="memory-3d-hint">Drag to rotate 360° · Scroll or pinch to zoom · Click to explore</span>
     </div>
-    {mode === "fallback" ? <MemoryGraphCanvas3D {...props} {...fallback} /> : null}
+    {mode === "fallback" ? <>
+      <MemoryGraphCanvas3D {...props} {...fallback} />
+      <p className="memory-3d-fallback-status" role="status">Graphics acceleration unavailable. Showing {fallback.nodes.length.toLocaleString("en-US")} of {nodes.length.toLocaleString("en-US")} nodes.</p>
+    </> : null}
     {props.benchmark ? <aside className="memory-3d-benchmark" aria-label="3D performance benchmark">
       <button type="button" disabled={loading || mode !== "webgl2" || benchmarkRunning} onClick={benchmark}>{benchmarkRunning ? "Measuring 300 frames…" : "Benchmark 3D (300 frames)"}</button>
       <button type="button" disabled={mode !== "webgl2" || benchmarkRunning} onClick={() => contextLossRef.current?.loseContext()}>Lose WebGL context</button>
