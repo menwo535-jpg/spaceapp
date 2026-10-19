@@ -85,16 +85,16 @@ Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 | Same production configuration, independent repeat | 50,000 / 150,000 | 1666 x 697 | 1.0 | 18.3 ms | 0.1 ms |
 | Small graph, final production | 2,000 / 6,000 | 1666 x 697 | 1.5 | 12.2 ms | <0.1 ms |
 
-The final production large-graph runs, recorded at `2026-10-19T18:10:52.686Z`
-and `2026-10-19T18:13:05.991Z`, meet the requested 33 ms frame P95 and 4 ms
-picking P95 on this hardware. Neither observed load/layout or benchmark
-main-thread long tasks. Their frame medians were 12.2 ms, maxima 48.6/30.4 ms,
-CPU enqueue P95 6.4/5.8 ms, and picking maxima 0.2 ms. The final production
-2,000-node run at `2026-10-19T18:24:10.703Z` measured 12.2 ms frame P95,
-meeting the 16.7 ms small-graph target, with no observed long tasks.
-The device and label ratios were both 1.5; only graph primitives used ratio 1.
-The table retains unsuccessful configurations, including the failed production
-repeat after the initial development pass, to make that tradeoff explicit.
+The final runtime (`5bff8d2`) was measured again in a production build at
+`2026-10-19T18:43:14.457Z` (50,000 nodes) and
+`2026-10-19T18:44:12.272Z` (2,000 nodes). The large graph measured **24.3 ms
+frame P95**, 12.2 ms median, 30.5 ms maximum, 3.2 ms CPU enqueue P95 and
+0.1 ms picking P95. The small graph measured **12.2 ms frame P95**.
+Both meet the requested 33 ms / 16.7 ms frame and 4 ms picking targets on this
+hardware, with no observed load/layout or benchmark main-thread long tasks.
+The device and label ratios were both 1.5; only large-graph primitives used
+ratio 1. Earlier successful and unsuccessful runs remain in the table and raw
+JSON. These measurements are specific to this laptop, viewport and workload.
 Raw browser measurements must accompany a qualifying performance claim.
 
 The synthetic 50,000-node/150,000-edge API response measured 31,289,411 UTF-8
@@ -104,9 +104,12 @@ serialization; these are server fixture timings, not end-to-end network latency.
 
 The affected web suite has 58 passing tests, including worker transfer,
 schema-valid synthetic data, indexed picking against a depth-aware reference,
-and context loss/recovery. At commit `ea6cfb2`, the complete Linux architecture
+and context loss/recovery. At final code commit
+`02572cf2cba7f42713c6d5c5115224a9b156bf90`, the complete Linux architecture
 and workspace typechecks, API/web regressions, all public test suites, all
 workspace builds and repository hygiene passed in workflow run `39297420132`,
-job `118218894701`. Final shader/reporting changes need the same checks on
-their final commit. Earlier invalid fixture provenance/identity and incorrect
-status expectations were corrected without relaxing production behavior.
+job `118251239140`. The subsequent commit only updates this document and the
+raw benchmark evidence. Earlier invalid fixture provenance/identity and
+incorrect status expectations were corrected without relaxing production
+behavior. A pre-existing watchdog fixture now uses a date-only clock so it
+does not assume event insertion order for equal timestamps.
