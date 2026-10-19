@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MemoryGraphNode } from "@space/contracts";
-import { createMemoryRenderModel, decodeMemoryPick, memoryLabelCandidates, MEMORY_LABEL_LIMIT, MEMORY_LABEL_CANDIDATES } from "../src/features/memory-workspace/memory-3d-model.js";
+import { createMemoryRenderModel, memoryLabelCandidates, MEMORY_LABEL_LIMIT, MEMORY_LABEL_CANDIDATES } from "../src/features/memory-workspace/memory-3d-model.js";
 import { DEFAULT_MEMORY_CAMERA } from "../src/features/memory-workspace/memory-3d.js";
 
 const node = (id: string, type: MemoryGraphNode["type"] = "MEMORY", label = id): MemoryGraphNode => ({ id, type, label, sourcePath: null, recordId: null });
@@ -40,13 +40,5 @@ describe("GPU memory graph model", () => {
       expect(labels.length).toBeLessThanOrEqual(MEMORY_LABEL_LIMIT);
       expect(new Set(labels).size).toBe(labels.length);
     }
-  });
-  it("decodes exact 24-bit GPU picking ids, including 50k, and rejects background", () => {
-    for (const index of [0, 254, 255, 65534, 49999]) {
-      const id = index + 1;
-      expect(decodeMemoryPick(new Uint8Array([id & 255, (id >>> 8) & 255, (id >>> 16) & 255, 255]), 70000)).toBe(index);
-    }
-    expect(decodeMemoryPick(new Uint8Array(4), 50000)).toBe(-1);
-    expect(decodeMemoryPick(new Uint8Array([255, 255, 255, 255]), 50000)).toBe(-1);
   });
 });

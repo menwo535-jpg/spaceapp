@@ -12,6 +12,7 @@ export function MemoryGraph3D(props: Props) {
   const { nodes, edges, positions, coordinates, showTitles, selectedNodeId, onSelectNode, loading, resetToken, frame: streamedFrame } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null), labelsRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<MemoryWebGLRenderer | null>(null);
+  const contextLossRef = useRef<WEBGL_lose_context | null>(null);
   const cameraRef = useRef({ ...DEFAULT_MEMORY_CAMERA });
   const redrawRef = useRef<() => void>(() => {});
   const [mode, setMode] = useState<"probing" | "webgl2" | "fallback">("probing");
@@ -26,10 +27,11 @@ export function MemoryGraph3D(props: Props) {
   const current = useRef({ model, showTitles, selectedNodeId, onSelectNode });
   current.current = { model, showTitles, selectedNodeId, onSelectNode };
   const fallback = useMemo(() => {
+    if (mode !== "fallback") return { nodes: [], edges: [], coordinates: new Map() };
     const subset = nodes.slice(0, MEMORY_CANVAS_LIMIT), ids = new Set(subset.map(node => node.id));
     return { nodes: subset, edges: edges.filter(edge => ids.has(edge.source) && ids.has(edge.target)).slice(0, 6000),
       coordinates: new Map(subset.map(node => { const i = model.index.get(node.id)! * 3; return [node.id, streamedFrame ? { x: streamedFrame[i]!, y: streamedFrame[i + 1]!, z: streamedFrame[i + 2]! } : coordinates.get(node.id) ?? { x: 0, y: 0, z: 0 }]; })) };
-  }, [nodes, edges, coordinates, model, streamedFrame]);
+  }, [nodes, edges, coordinates, model, streamedFrame, mode]);
   const volumeRatio = useMemo(() => memory3DVolumeRatio(streamedFrame ?? [...coordinates.values()]), [coordinates, streamedFrame]);
   useEffect(() => {
     if (loading) { loadStarted.current = performance.now(); loadFinished.current = Number.POSITIVE_INFINITY; }
@@ -57,6 +59,7 @@ export function MemoryGraph3D(props: Props) {
     let gl: WebGL2RenderingContext | null = null;
     try { gl = canvas.getContext("webgl2", { alpha: true, antialias: false, preserveDrawingBuffer: false }); } catch { /* Canvas fallback. */ }
     if (!gl) { setMode("fallback"); return; }
+    if (props.benchmark) contextLossRef.current = gl.getExtension("WEBGL_lose_context");
     const labelContext = labels.getContext("2d");
     let animation = 0, width = 1, height = 1, hover = -1;
     const pointers = new Map<number, { x: number; y: number }>();
@@ -110,7 +113,10 @@ export function MemoryGraph3D(props: Props) {
         gpuName.current = debug ? String(gl!.getParameter(debug.UNMASKED_RENDERER_WEBGL)) : String(gl!.getParameter(gl!.RENDERER));
       } catch { rendererRef.current?.dispose(); rendererRef.current = null; setMode("fallback"); }
     };
-    const lost = (event: Event) => { event.preventDefault(); cancelAnimationFrame(animation); animation = 0; setMode("fallback"); };
+    const lost = (event: Event) => {
+      event.preventDefault(); cancelAnimationFrame(animation); animation = 0;
+      benchmarkRun.current = null; setBenchmarkRunning(false); setBenchmarkResult(""); setMode("fallback");
+    };
     canvas.addEventListener("webglcontextlost", lost); canvas.addEventListener("webglcontextrestored", activate);
     activate();
     const local = (event: PointerEvent) => { const rect = canvas.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; };
@@ -165,6 +171,7 @@ export function MemoryGraph3D(props: Props) {
       canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", move); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", cancel);
       canvas.removeEventListener("wheel", wheel); canvas.removeEventListener("keydown", key);
       rendererRef.current?.dispose(); rendererRef.current = null;
+      contextLossRef.current = null;
     };
   }, []);
 
@@ -187,6 +194,8 @@ export function MemoryGraph3D(props: Props) {
     {mode === "fallback" ? <MemoryGraphCanvas3D {...props} {...fallback} /> : null}
     {props.benchmark ? <aside className="memory-3d-benchmark" aria-label="3D performance benchmark">
       <button type="button" disabled={loading || mode !== "webgl2" || benchmarkRunning} onClick={benchmark}>{benchmarkRunning ? "Measuring 300 frames…" : "Benchmark 3D (300 frames)"}</button>
+      <button type="button" disabled={mode !== "webgl2" || benchmarkRunning} onClick={() => contextLossRef.current?.loseContext()}>Lose WebGL context</button>
+      <button type="button" disabled={mode !== "fallback"} onClick={() => contextLossRef.current?.restoreContext()}>Restore WebGL context</button>
       {benchmarkRunning ? <output aria-label="3D benchmark progress">{benchmarkProgress} / 300 · {document.visibilityState}</output> : null}
       {benchmarkResult ? <pre tabIndex={0} aria-label="3D benchmark results">{benchmarkResult}</pre> : null}
     </aside> : null}

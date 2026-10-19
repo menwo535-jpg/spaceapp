@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { memoryGraphOverviewPayloadSchema } from "@space/contracts";
 import { createSyntheticMemoryGraph, syntheticMemoryNodeDetail } from "../src/demo/demo-memory-graph.js";
 
 describe("reproducible memory graph benchmark data", () => {
@@ -20,5 +21,9 @@ describe("reproducible memory graph benchmark data", () => {
     expect(syntheticMemoryNodeDetail("demo:graph:49999")?.node.id).toBe("demo:graph:49999");
     expect(syntheticMemoryNodeDetail("demo:graph:50000")).toBeNull();
     expect(syntheticMemoryNodeDetail("not-a-demo-node")).toBeNull();
+  });
+  it("produces a complete payload accepted by the same contract as the live endpoint", () => {
+    const graph = createSyntheticMemoryGraph(2000);
+    expect(memoryGraphOverviewPayloadSchema.safeParse(graph).success).toBe(true);
   });
 });

@@ -58,7 +58,7 @@ uniform int u_focus;
 out vec4 v_color;
 ${cameraShader}
 void main() {
-  int index = gl_VertexID == 0 ? a_indices.x : a_indices.y;
+  int index = a_indices.x;
   vec3 position = texelFetch(u_positions, ivec2(index % u_textureWidth, index / u_textureWidth), 0).xyz;
   vec4 point = projectPoint(position);
   gl_Position = vec4(point.xyz, 1.0);
@@ -114,10 +114,10 @@ export class MemoryWebGLRenderer {
     gl.bindVertexArray(this.edgeVao);
     const edgeIndices = this.buffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, edgeIndices);
-    gl.enableVertexAttribArray(0); gl.vertexAttribIPointer(0, 2, gl.INT, 8, 0); gl.vertexAttribDivisor(0, 1);
+    gl.enableVertexAttribArray(0); gl.vertexAttribIPointer(0, 2, gl.INT, 8, 0);
     const edgeKinds = this.buffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, edgeKinds);
-    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 4, 0); gl.vertexAttribDivisor(1, 1);
+    gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 4, 0);
     gl.bindVertexArray(null);
     this.textureWidth = Math.min(1024, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number);
     this.positionTexture = object(gl.createTexture());
@@ -158,7 +158,16 @@ export class MemoryWebGLRenderer {
   setModel(model: MemoryRenderModel) {
     const gl = this.gl;
     this.model = model; this.focus = -1;
-    for (const [buffer, data] of [[this.buffers[1]!, model.styles], [this.buffers[3]!, model.edgeIndices], [this.buffers[4]!, model.edgeKinds]] as const) {
+    // A single vertex batch avoids 150k two-vertex instances on integrated GPUs.
+    // Both endpoints carry the pair so focus highlighting remains branch-free.
+    const edgeVertices = new Int32Array(model.edgeIndices.length * 2);
+    const edgeKinds = new Float32Array(model.edgeKinds.length * 2);
+    for (let i = 0; i < model.edgeKinds.length; i++) {
+      const a = model.edgeIndices[i * 2]!, b = model.edgeIndices[i * 2 + 1]!;
+      edgeVertices.set([a, b, b, a], i * 4);
+      edgeKinds[i * 2] = edgeKinds[i * 2 + 1] = model.edgeKinds[i]!;
+    }
+    for (const [buffer, data] of [[this.buffers[1]!, model.styles], [this.buffers[3]!, edgeVertices], [this.buffers[4]!, edgeKinds]] as const) {
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     }
     this.neighborData = new Float32Array(model.nodes.length);
@@ -214,7 +223,7 @@ export class MemoryWebGLRenderer {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.positionTexture);
     gl.uniform1i(this.uniform(this.edgeProgram, "u_positions"), 0);
     gl.uniform1i(this.uniform(this.edgeProgram, "u_textureWidth"), this.textureWidth);
-    gl.bindVertexArray(this.edgeVao); gl.drawArraysInstanced(gl.LINES, 0, 2, this.model.edgeKinds.length);
+    gl.bindVertexArray(this.edgeVao); gl.drawArrays(gl.LINES, 0, this.model.edgeKinds.length * 2);
     this.camera(this.nodeProgram, camera);
     gl.bindVertexArray(this.nodeVao); gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
     gl.bindVertexArray(null);

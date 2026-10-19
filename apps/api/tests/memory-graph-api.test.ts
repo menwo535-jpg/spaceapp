@@ -417,7 +417,7 @@ describe("Memory graph API", () => {
   it("loads 50k redacted nodes and 150k edges only on an explicit bounded request", async () => {
     const graphSnapshot = snapshot() as MemoryGraphSnapshot;
     graphSnapshot.nodes = Array.from({ length: 50001 }, (_, i) => ({ id: `memory:${String(i).padStart(5, "0")}`, type: "MEMORY" as const, label: i === 0 ? "token=private-test-value" : `Memory ${i}`, sourcePath: null, recordId: null }));
-    graphSnapshot.edges = Array.from({ length: 150001 }, (_, i) => ({ id: `edge:${i}`, source: graphSnapshot.nodes[i % 49999]!.id, target: graphSnapshot.nodes[(i + 1) % 49999]!.id, type: "SEMANTICALLY_RELATED" as const, evidence: "token=private-edge-value" }));
+    graphSnapshot.edges = Array.from({ length: 150001 }, (_, i) => ({ id: `edge:${i}`, source: graphSnapshot.nodes[i % 49999]!.id, target: graphSnapshot.nodes[(i + 1) % 49999]!.id, type: "SEMANTICALLY_RELATED" as const, origin: "DETERMINISTIC_TFIDF" as const, confidence: 0.8, evidence: "token=private-edge-value" }));
     const app = await memoryGraphApp(true, new InMemorySpaceStore(), false, undefined, { graphSnapshot });
     try {
       const start = performance.now();

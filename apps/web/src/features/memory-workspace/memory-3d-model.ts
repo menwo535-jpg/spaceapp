@@ -72,7 +72,3 @@ export function memoryLabelCandidates(model: MemoryRenderModel, camera: MemoryCa
   return candidates;
 }
 
-export function decodeMemoryPick(rgba: Uint8Array, count: number): number {
-  const index = (rgba[0]! | (rgba[1]! << 8) | (rgba[2]! << 16)) - 1;
-  return index >= 0 && index < count ? index : -1;
-}
