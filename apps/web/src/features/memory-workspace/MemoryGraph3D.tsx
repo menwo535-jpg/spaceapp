@@ -40,6 +40,7 @@ export function MemoryGraph3D(props: Props) {
       coordinates: new Map(subset.map(node => { const i = model.index.get(node.id)! * 3; return [node.id, streamedFrame ? { x: streamedFrame[i]!, y: streamedFrame[i + 1]!, z: streamedFrame[i + 2]! } : coordinates.get(node.id) ?? { x: 0, y: 0, z: 0 }]; })) };
   }, [nodes, edges, coordinates, model, streamedFrame, mode]);
   const volumeRatio = useMemo(() => memory3DVolumeRatio(streamedFrame ?? [...coordinates.values()]), [coordinates, streamedFrame]);
+  const totalNodes = Math.max(nodes.length, props.totalNodes ?? nodes.length);
   useEffect(() => {
     if (loading) { loadStarted.current = performance.now(); loadFinished.current = Number.POSITIVE_INFINITY; }
     else loadFinished.current = performance.now();
@@ -226,7 +227,7 @@ export function MemoryGraph3D(props: Props) {
     </div>
     {mode === "fallback" ? <>
       <MemoryGraphCanvas3D {...props} {...fallback} />
-      <p className="memory-3d-fallback-status" role="status">Graphics acceleration unavailable. Showing {fallback.nodes.length.toLocaleString("en-US")} of {Math.max(nodes.length, props.totalNodes ?? nodes.length).toLocaleString("en-US")} nodes.{props.truncated || fallback.nodes.length < nodes.length ? " Additional matching nodes are not shown." : ""}</p>
+      <p className="memory-3d-fallback-status" role="status">Graphics acceleration unavailable. Showing {fallback.nodes.length.toLocaleString("en-US")} of {totalNodes.toLocaleString("en-US")} nodes.{fallback.nodes.length < totalNodes ? " Additional matching nodes are not shown." : ""}</p>
     </> : null}
     {props.benchmark ? <aside className="memory-3d-benchmark" aria-label="3D performance benchmark">
       <button type="button" disabled={loading || mode !== "webgl2" || benchmarkRunning} onClick={benchmark}>{benchmarkRunning ? "Measuring 300 frames…" : "Benchmark 3D (300 frames)"}</button>

@@ -32,6 +32,7 @@ describe("3D memory graph context recovery", () => {
     expect(canvas.getAttribute("tabindex")).toBe("0");
     expect(canvas.getAttribute("aria-label")).toContain("arrow keys");
     expect(canvas.getAttribute("aria-busy")).toBe("false");
+    expect(screen.getByRole("status").textContent).toContain("Additional matching nodes are not shown.");
     expect(onRendererModeChange).toHaveBeenLastCalledWith("fallback");
     view.unmount();
     expect(onRendererModeChange).toHaveBeenLastCalledWith(null);
@@ -42,6 +43,13 @@ describe("3D memory graph context recovery", () => {
     render(<MemoryGraph3D {...props} nodes={graph.nodes.slice(0, 2000)} totalNodes={50000} truncated />);
     expect(screen.getByRole("status").textContent).toContain("Showing 2,000 of 50,000 nodes.");
     expect(screen.getByRole("status").textContent).toContain("Additional matching nodes are not shown.");
+  });
+
+  it.each([undefined, 2000])("does not report omitted nodes for an edge-only truncation with total %s", totalNodes => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    render(<MemoryGraph3D {...props} nodes={graph.nodes.slice(0, 2000)} totalNodes={totalNodes} truncated />);
+    expect(screen.getByRole("status").textContent).toContain("Showing 2,000 of 2,000 nodes.");
+    expect(screen.getByRole("status").textContent).not.toContain("Additional matching nodes are not shown.");
   });
 
   it("switches to the capped renderer on context loss and reuploads the full model on restore", () => {
