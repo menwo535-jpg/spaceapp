@@ -38,7 +38,24 @@ jobs:
           npm test -w @space/api -- memory-graph-api
           npm test -w @space/web -- memory
       - name: Complete public test suites
-        run: npm test
+        run: |
+          # Real browser fixtures share Linux X display numbers across test processes.
+          # Keep every assertion and suite, but isolate API files on this small runner.
+          # Restore the source manifest even on failure; no retry or skipped test.
+          cp apps/api/package.json "$RUNNER_TEMP/space-api-package.json"
+          trap 'cp "$RUNNER_TEMP/space-api-package.json" apps/api/package.json' EXIT
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const path = 'apps/api/package.json';
+          const pkg = JSON.parse(readFileSync(path, 'utf8'));
+          if (pkg.scripts.test !== 'vitest run --maxWorkers=2') {
+            throw new Error('Unexpected API test command; review before changing concurrency.');
+          }
+          pkg.scripts.test = 'vitest run --maxWorkers=1';
+          writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+          console.log('API test concurrency: one worker; all suites and assertions retained.');
+          NODE
+          npm test
       - name: Build all workspaces
         run: npm run build
       - name: Check repository hygiene
