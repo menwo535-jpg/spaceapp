@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryGraph3D } from "./features/memory-workspace/MemoryGraph3D.js";
 import { useMemoryArchive } from "./features/memory-workspace/useMemoryArchive.js";
+import { SpaceToggle } from "./features/ui-controls/SpaceToggle.js";
 import "./features/memory-workspace/memory-atlas.css";
 import "./memory-graph-benchmark.css";
 
@@ -17,7 +18,7 @@ function BenchmarkPage() {
       <label>Graph size <select value={count} onChange={event => { setCount(Number(event.target.value)); setSelected(null); }}>
         <option value="2000">2,000</option><option value="10000">10,000</option><option value="50000">50,000</option>
       </select></label>
-      <label><input type="checkbox" checked={titles} onChange={event => setTitles(event.target.checked)} /> Titles</label>
+      <SpaceToggle label="Titles" checked={titles} onChange={setTitles} compact />
       <button onClick={() => setReset(value => value + 1)}>Reset camera</button>
       <output>{state ? `${state.model.nodes.length.toLocaleString("en-US")} nodes / ${state.model.edgeKinds.length.toLocaleString("en-US")} edges` : "Loading in worker…"}</output>
       <output aria-label="Selected node">{selected ?? "No node selected"}</output>

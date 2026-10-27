@@ -14,7 +14,7 @@ describe("Space checkbox switch inventory", () => {
   it("routes every native checkbox through SpaceToggle", () => {
     const matches = sourceFiles("src").flatMap((path) => {
       const count = readFileSync(path, "utf8").match(/type="checkbox"/g)?.length ?? 0;
-      return Array.from({ length: count }, () => relative("src", path));
+      return Array.from({ length: count }, () => relative("src", path).replaceAll("\\", "/"));
     }).sort();
 
     // On/off settings use SpaceToggle. Native checkboxes are kept only where a checkbox is the right
