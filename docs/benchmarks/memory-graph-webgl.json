@@ -1,5 +1,5 @@
 {
-  "scope": "Synthetic graph, integrated AMD Radeon 610M laptop; earlier failed configuration retained",
+  "scope": "Synthetic graph on AMD Radeon 610M; historical successful and failed records retained. Only records with explicit clean source provenance support current acceptance.",
   "measurements": [
     {
       "nodes": 50000,
@@ -23,7 +23,16 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:03:59.598Z"
+      "generatedAt": "2026-10-19T18:03:59.598Z",
+      "provenance": {
+        "sourceCommit": null,
+        "sourceEvidence": "No contemporaneous clean source SHA retained for this capture; historical diagnostic only",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
     },
     {
       "nodes": 50000,
@@ -47,7 +56,16 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:10:52.686Z"
+      "generatedAt": "2026-10-19T18:10:52.686Z",
+      "provenance": {
+        "sourceCommit": null,
+        "sourceEvidence": "No contemporaneous clean source SHA retained for this capture; historical diagnostic only",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
     },
     {
       "nodes": 50000,
@@ -71,7 +89,16 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:13:05.991Z"
+      "generatedAt": "2026-10-19T18:13:05.991Z",
+      "provenance": {
+        "sourceCommit": null,
+        "sourceEvidence": "No contemporaneous clean source SHA retained for this capture; historical diagnostic only",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
     },
     {
       "nodes": 2000,
@@ -95,7 +122,16 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:24:10.703Z"
+      "generatedAt": "2026-10-19T18:24:10.703Z",
+      "provenance": {
+        "sourceCommit": null,
+        "sourceEvidence": "No contemporaneous clean source SHA retained for this capture; historical diagnostic only",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
     },
     {
       "nodes": 50000,
@@ -119,7 +155,16 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:43:14.457Z"
+      "generatedAt": "2026-10-19T18:43:14.457Z",
+      "provenance": {
+        "sourceCommit": "5bff8d2bdc4e8e60dc34b7447c295aa8585e46ce",
+        "sourceEvidence": "Original validation document explicitly identifies this source for the 18:43 and18:44 production captures",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
     },
     {
       "nodes": 2000,
@@ -143,7 +188,200 @@
       "benchmarkLongTasksMs": [],
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
       "visibility": "visible",
-      "generatedAt": "2026-10-19T18:44:12.272Z"
+      "generatedAt": "2026-10-19T18:44:12.272Z",
+      "provenance": {
+        "sourceCommit": "5bff8d2bdc4e8e60dc34b7447c295aa8585e46ce",
+        "sourceEvidence": "Original validation document explicitly identifies this source for the 18:43 and18:44 production captures",
+        "buildMode": "production",
+        "titlesVisible": null,
+        "warmupFrames": null,
+        "cameraStart": null,
+        "acceptanceEvidence": false
+      }
+    },
+    {
+      "nodes": 2000,
+      "edges": 6000,
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1130,
+        474.3333435058594
+      ],
+      "dpr": 1.5,
+      "devicePixelRatio": 1.5,
+      "labelPixelRatio": 1.5,
+      "loadLongTasksMs": [],
+      "samples": 300,
+      "frameP95Ms": 6.19999999999709,
+      "frameMedianMs": 6.099999999998545,
+      "frameMaxMs": 6.200000000004366,
+      "drawCpuP95Ms": 0.5999999046325684,
+      "pickingP95Ms": 0,
+      "pickingMaxMs": 0.10000014305114746,
+      "benchmarkLongTasksMs": [],
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+      "visibility": "visible",
+      "generatedAt": "2026-10-27T02:13:01.890Z",
+      "provenance": {
+        "sourceCommit": "2b1240d34a769ad0dc5325e5b2642f6715eca9e6",
+        "buildMode": "production",
+        "command": "production web build served on loopback; exact original command not retained with this capture",
+        "node": "22.21.1",
+        "npm": "10.9.4",
+        "titlesVisible": true,
+        "layout": "worker complete before sampling",
+        "warmupFrames": 60,
+        "sampleFrames": 300,
+        "cameraStart": null,
+        "cameraMotion": "harness yaw +=0.012 per frame; zoom=1+0.25*sin(frame/45)",
+        "browserViewportCss": null,
+        "cleanSourceVerified": null,
+        "acceptanceEvidence": false,
+        "sourceEvidence": "Source revision recorded during27October capture; not used for current acceptance"
+      }
+    },
+    {
+      "nodes": 50000,
+      "edges": 150000,
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1130,
+        474.3333435058594
+      ],
+      "dpr": 1,
+      "devicePixelRatio": 1.5,
+      "labelPixelRatio": 1.5,
+      "loadLongTasksMs": [],
+      "samples": 300,
+      "frameP95Ms": 12.099999999976717,
+      "frameMedianMs": 6.099999999976717,
+      "frameMaxMs": 12.200000000011642,
+      "drawCpuP95Ms": 2.4000000953674316,
+      "pickingP95Ms": 0.10000014305114746,
+      "pickingMaxMs": 0.20000004768371582,
+      "benchmarkLongTasksMs": [],
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+      "visibility": "visible",
+      "generatedAt": "2026-10-27T02:16:42.462Z",
+      "provenance": {
+        "sourceCommit": "2b1240d34a769ad0dc5325e5b2642f6715eca9e6",
+        "buildMode": "production",
+        "command": "production web build served on loopback; exact original command not retained with this capture",
+        "node": "22.21.1",
+        "npm": "10.9.4",
+        "titlesVisible": true,
+        "layout": "worker complete before sampling",
+        "warmupFrames": 60,
+        "sampleFrames": 300,
+        "cameraStart": null,
+        "cameraMotion": "harness yaw +=0.012 per frame; zoom=1+0.25*sin(frame/45)",
+        "browserViewportCss": null,
+        "cleanSourceVerified": null,
+        "acceptanceEvidence": false,
+        "sourceEvidence": "Source revision recorded during27October capture; not used for current acceptance"
+      }
+    },
+    {
+      "nodes": 2000,
+      "edges": 6000,
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1130,
+        474.3333435058594
+      ],
+      "dpr": 1.5,
+      "devicePixelRatio": 1.5,
+      "labelPixelRatio": 1.5,
+      "loadLongTasksMs": [],
+      "samples": 300,
+      "frameP95Ms": 6.100000000002183,
+      "frameMedianMs": 6.099999999998545,
+      "frameMaxMs": 6.200000000000728,
+      "drawCpuP95Ms": 0.5,
+      "pickingP95Ms": 0,
+      "pickingMaxMs": 0.10000014305114746,
+      "benchmarkLongTasksMs": [],
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+      "visibility": "visible",
+      "generatedAt": "2026-10-27T04:19:24.497Z",
+      "provenance": {
+        "sourceCommit": "b146a0fcc1e0cbea39f099aea10559c74f70029e",
+        "buildMode": "production",
+        "command": "npm run build -w @space/web; npm run preview -w @space/web -- --host 127.0.0.1 --port 4916",
+        "node": "22.21.1",
+        "npm": "10.9.4",
+        "titlesVisible": true,
+        "layout": "worker complete before sampling",
+        "warmupFrames": 60,
+        "sampleFrames": 300,
+        "cameraStart": "default; large graph Reset camera before sampling",
+        "cameraMotion": "harness yaw +=0.012 per frame; zoom=1+0.25*sin(frame/45)",
+        "browserViewportCss": [
+          1171,
+          619
+        ],
+        "cleanSourceVerified": true,
+        "acceptanceEvidence": true,
+        "memoryWorkspaceTree": "23e920f48baf4bf721a2de63d9afbf3f351901ce",
+        "benchmarkPageBlob": "ac1407da29d07623cf5e29d0fdffc6e8a0f0d8c7",
+        "buildAssetSha256": {
+          "memoryGraphBenchmark-BgSx3sXe.js": "94557354adcb5cbf4f003fadaf675acc3a987f5f5a9191f0958f803cf14009b6",
+          "memory-3d-DSXb6CbR.js": "9004e61c818a4bf51924b3dc3ef91099aa0a7f0c1020b797609990d3e1d3755d",
+          "useMemoryArchive-Cw_1aVCC.js": "2d1c2299200ecb00613401e6cb8b05a789791cf225ebff5991289fde08d59682"
+        }
+      }
+    },
+    {
+      "nodes": 50000,
+      "edges": 150000,
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "viewport": [
+        1130,
+        474.3333435058594
+      ],
+      "dpr": 1,
+      "devicePixelRatio": 1.5,
+      "labelPixelRatio": 1.5,
+      "loadLongTasksMs": [],
+      "samples": 300,
+      "frameP95Ms": 12.19999999999709,
+      "frameMedianMs": 6.099999999991269,
+      "frameMaxMs": 12.30000000000291,
+      "drawCpuP95Ms": 2.200000047683716,
+      "pickingP95Ms": 0.10000014305114746,
+      "pickingMaxMs": 0.39999985694885254,
+      "benchmarkLongTasksMs": [],
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+      "visibility": "visible",
+      "generatedAt": "2026-10-27T04:21:17.714Z",
+      "provenance": {
+        "sourceCommit": "b146a0fcc1e0cbea39f099aea10559c74f70029e",
+        "buildMode": "production",
+        "command": "npm run build -w @space/web; npm run preview -w @space/web -- --host 127.0.0.1 --port 4916",
+        "node": "22.21.1",
+        "npm": "10.9.4",
+        "titlesVisible": true,
+        "layout": "worker complete before sampling",
+        "warmupFrames": 60,
+        "sampleFrames": 300,
+        "cameraStart": "default; large graph Reset camera before sampling",
+        "cameraMotion": "harness yaw +=0.012 per frame; zoom=1+0.25*sin(frame/45)",
+        "browserViewportCss": [
+          1171,
+          619
+        ],
+        "cleanSourceVerified": true,
+        "acceptanceEvidence": true,
+        "memoryWorkspaceTree": "23e920f48baf4bf721a2de63d9afbf3f351901ce",
+        "benchmarkPageBlob": "ac1407da29d07623cf5e29d0fdffc6e8a0f0d8c7",
+        "buildAssetSha256": {
+          "memoryGraphBenchmark-BgSx3sXe.js": "94557354adcb5cbf4f003fadaf675acc3a987f5f5a9191f0958f803cf14009b6",
+          "memory-3d-DSXb6CbR.js": "9004e61c818a4bf51924b3dc3ef91099aa0a7f0c1020b797609990d3e1d3755d",
+          "useMemoryArchive-Cw_1aVCC.js": "2d1c2299200ecb00613401e6cb8b05a789791cf225ebff5991289fde08d59682"
+        }
+      }
     }
-  ]
+  ],
+  "viewportUnits": "viewport is graph canvas width/height in CSS pixels, not the browser outer window",
+  "provenancePolicy": "null means the original capture did not record that fact; it is not inferred from a later commit or treated as current-head evidence"
 }

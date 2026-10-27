@@ -70,7 +70,7 @@ The demo workspace also has the same graph-size selector and benchmark under
 its 3D Atlas view. **Lose WebGL context** and **Restore WebGL context** exercise
 the actual browser extension and fallback path without changing browser flags.
 
-## Validation status
+## Historical validation (19 October)
 
 Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 
@@ -85,7 +85,7 @@ Measured on an AMD Radeon 610M integrated laptop GPU, Windows 11, Chrome 155:
 | Same production configuration, independent repeat | 50,000 / 150,000 | 1666 x 697 | 1.0 | 18.3 ms | 0.1 ms |
 | Small graph, final production | 2,000 / 6,000 | 1666 x 697 | 1.5 | 12.2 ms | <0.1 ms |
 
-The final runtime (`5bff8d2`) was measured again in a production build at
+The 19 October runtime (`5bff8d2`) was measured again in a production build at
 `2026-10-19T18:43:14.457Z` (50,000 nodes) and
 `2026-10-19T18:44:12.272Z` (2,000 nodes). The large graph measured **24.3 ms
 frame P95**, 12.2 ms median, 30.5 ms maximum, 3.2 ms CPU enqueue P95 and
@@ -113,3 +113,45 @@ raw benchmark evidence. Earlier invalid fixture provenance/identity and
 incorrect status expectations were corrected without relaxing production
 behavior. A pre-existing watchdog fixture now uses a date-only clock so it
 does not assume event insertion order for equal timestamps.
+
+## Current source verification (27 October)
+
+A clean production build of `b146a0fcc1e0cbea39f099aea10559c74f70029e`
+was loaded in Chrome 155 on Windows with an AMD Radeon 610M. Node was 22.21.1
+and npm 10.9.4. The browser viewport was 1171 x 619 CSS pixels; the graph canvas
+was 1130 x 474.3333 CSS pixels. Titles were enabled, worker layout completed,
+and the default camera was used (Reset camera before the large run).
+Each run uses the harness's 60 warm-up frames and 300 recorded frames.
+
+| Source | Nodes / edges | Graph / label ratio | Frame P95 | Pick P95 | UTC capture |
+| --- | --- | --- | --- | --- | --- |
+| `b146a0f` | 2,000 / 6,000 | 1.5 / 1.5 | 6.1 ms | 0 ms | 04:19:24.497 |
+| `b146a0f` | 50,000 / 150,000 | 1 / 1.5 | 12.2 ms | 0.1 ms | 04:21:17.714 |
+
+Both pass the requested frame and picking budgets on this device and viewport.
+No main-thread load or benchmark long tasks were recorded. Arrow rotation,
+plus-key zoom, Enter selection, actual WebGL context loss (Canvas displays
+2,000 of 50,000 and says remaining matches are hidden), and restoration were
+also exercised on this build. These are synthetic, device-specific results.
+
+The raw JSON now records source, configuration, viewport units and artifact
+hashes. The six older records retain their original numeric values. The first
+four lack a contemporaneous clean source SHA and are marked historical
+diagnostics, not evidence for the current head; their missing facts remain
+null. The last two identify the `5bff8d2` source recorded in the original
+document. The two `2b1240d` captures are retained with their known source;
+the two `b146a0f` captures are the current acceptance evidence. No provenance
+is inferred merely from a nearby commit time.
+
+Linux run [40445323891](https://github.com/menwo535-jpg/spaceapp/actions/runs/40445323891)
+checked out exact source `b146a0f` and passed all architecture/type checks,
+26 memory API and 70 memory web regressions, complete public suites (3,992 API
+passed / 18 existing skips, 4,151 web passed, 232 worker passed, plus package
+suites), all workspace builds and repository hygiene. API files were serialized
+with `maxWorkers=1` instead of 2 in the verification runner. All suites and
+assertions were retained; the source manifest was restored and hygiene reported
+zero changes. Two unrelated web cases passed on the existing retry x1.
+The earlier same-source run with two API workers failed Chrome DevTools startup;
+its root cause remains unproven. The evidence commit changes only these docs
+and JSON, so runtime, tests, configuration and dependencies are identical to
+the measured and Linux-tested source.
