@@ -24,19 +24,25 @@ describe("3D memory graph context recovery", () => {
 
   it("caps the existing accessible Canvas renderer at 2k when WebGL2 is unavailable", () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-    render(<MemoryGraph3D {...props} />);
+    const onRendererModeChange = vi.fn();
+    const view = render(<MemoryGraph3D {...props} onRendererModeChange={onRendererModeChange} />);
     const canvas = screen.getByRole("application");
     expect(canvas.parentElement?.getAttribute("data-renderer")).toBe("canvas2d");
     expect(canvas.parentElement?.getAttribute("data-node-count")).toBe("2000");
     expect(canvas.getAttribute("tabindex")).toBe("0");
     expect(canvas.getAttribute("aria-label")).toContain("arrow keys");
     expect(canvas.getAttribute("aria-busy")).toBe("false");
+    expect(onRendererModeChange).toHaveBeenLastCalledWith("fallback");
+    view.unmount();
+    expect(onRendererModeChange).toHaveBeenLastCalledWith(null);
   });
 
   it("switches to the capped renderer on context loss and reuploads the full model on restore", () => {
     const gl = { getExtension: () => null, getParameter: () => "test GPU" };
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (type) { return type === "webgl2" ? gl as unknown as WebGL2RenderingContext : null; });
-    render(<MemoryGraph3D {...props} />);
+    const onRendererModeChange = vi.fn();
+    render(<MemoryGraph3D {...props} onRendererModeChange={onRendererModeChange} />);
+    expect(onRendererModeChange).toHaveBeenLastCalledWith("webgl2");
     const original = screen.getByRole("application");
     expect(renderer.setModel).toHaveBeenCalledWith(expect.objectContaining({ nodes: graph.nodes }));
     const uploadedBeforeLoss = renderer.setModel.mock.calls.length;
@@ -44,10 +50,12 @@ describe("3D memory graph context recovery", () => {
     act(() => { original.dispatchEvent(lost); });
     expect(lost.defaultPrevented).toBe(true);
     expect(screen.getByRole("application").parentElement?.getAttribute("data-node-count")).toBe("2000");
+    expect(onRendererModeChange).toHaveBeenLastCalledWith("fallback");
     act(() => { original.dispatchEvent(new Event("webglcontextrestored")); });
     expect(screen.getByRole("application")).toBe(original);
     expect(renderer.setModel).toHaveBeenCalledTimes(uploadedBeforeLoss + 1);
     expect(renderer.dispose).toHaveBeenCalled();
+    expect(onRendererModeChange).toHaveBeenLastCalledWith("webgl2");
   });
 
   function interactiveGraph() {

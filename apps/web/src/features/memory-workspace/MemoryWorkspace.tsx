@@ -34,6 +34,7 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
   const [sampleGraph, setGraph] = useState<MemoryGraphOverviewResponse | null>(null);
   const [fullGraph, setFullGraph] = useState(false);
   const [demoCount, setDemoCount] = useState<number | null>(null);
+  const [rendererMode, setRendererMode] = useState<"webgl2" | "fallback" | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MemoryGraphNodeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
   const [error, setError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const demo = getSpaceRuntimeKind() === "demo";
-  const archiveEnabled = workspaceMode === "atlas" && view3D && (fullGraph || demoCount !== null) && typeof Worker !== "undefined";
+  const archiveEnabled = workspaceMode === "atlas" && view3D && rendererMode === "webgl2" && (fullGraph || demoCount !== null) && typeof Worker !== "undefined";
   const archive = useMemoryArchive(archiveEnabled, demo, demoCount ?? 50000, query);
   const graph = archiveEnabled ? archive.state?.graph ?? null : sampleGraph;
   const detailRequest = useRef(0);
@@ -77,12 +78,13 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [closeDetail, onClose, queryDraft, selectedNodeId]);
 
+  useEffect(() => { closeDetail(); }, [workspaceMode, query, archiveEnabled, demoCount, closeDetail]);
+
   useEffect(() => {
     if (workspaceMode !== "atlas" || archiveEnabled) return;
     let active = true;
     setLoading(true);
     setError(null);
-    closeDetail();
     // Search covers the entire archive; removing the month picker must not hide old memories.
     void api.memoryGraphOverview({ q: query || undefined, month: "all", relationMode: "RELATIONS" })
       .then(payload => { if (active) setGraph(payload); })
@@ -119,6 +121,8 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
     return () => worker.terminate();
   }, [workspaceMode, atlas, archiveEnabled]);
   const layoutPending = archiveEnabled ? !archive.state?.complete : typeof Worker !== "undefined" && atlas.nodes.length > 0 && layout?.atlas !== atlas;
+  const graphError = archiveEnabled ? archive.error : error;
+  const graphLoading = (archiveEnabled ? !archive.state : loading) || layoutPending;
   const atlasPositions = layout?.atlas === atlas ? layout.positions : atlas.positions;
   const summary = graph?.data.summary;
   const memoryCount = atlas.nodes.filter(node => node.type === "MEMORY").length;
@@ -167,11 +171,11 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
           </div>}
           {workspaceMode === "atlas" ? (
             <div className="memory-atlas-view-controls" aria-label="Memory view controls">
-              <button type="button" aria-label="Toggle 3D memory view" aria-pressed={view3D} onClick={() => setView3D(value => !value)}><span aria-hidden="true">◇</span> {view3D ? "2D" : "3D"}</button>
+              <button type="button" aria-label="Toggle 3D memory view" aria-pressed={view3D} onClick={() => { setRendererMode(null); setView3D(value => !value); }}><span aria-hidden="true">◇</span> {view3D ? "2D" : "3D"}</button>
               <button type="button" aria-label="Toggle memory titles" aria-pressed={showTitles} onClick={() => setShowTitles(value => !value)}>Aa <span>Titles</span></button>
               {view3D ? <button type="button" aria-label="Reset 3D memory view" onClick={() => setReset3D(value => value + 1)}>↺</button> : null}
-              {view3D && !demo && !fullGraph && sampleGraph?.data.truncated ? <button type="button" disabled={typeof Worker === "undefined"} onClick={() => setFullGraph(true)}>Load full 3D graph (up to 50,000)</button> : null}
-              {view3D && demo ? <label>Demo graph size <select aria-label="Demo graph size" value={demoCount ?? "sample"} onChange={event => setDemoCount(event.target.value === "sample" ? null : Number(event.target.value))}>
+              {view3D && !demo && !fullGraph && sampleGraph?.data.truncated ? <button type="button" disabled={typeof Worker === "undefined" || rendererMode !== "webgl2"} onClick={() => setFullGraph(true)}>Load full 3D graph (up to 50,000)</button> : null}
+              {view3D && demo ? <label>Demo graph size <select aria-label="Demo graph size" disabled={typeof Worker === "undefined" || rendererMode !== "webgl2"} value={demoCount ?? "sample"} onChange={event => setDemoCount(event.target.value === "sample" ? null : Number(event.target.value))}>
                 <option value="sample">Sample</option><option value="2000">2,000</option><option value="10000">10,000</option><option value="50000">50,000</option>
               </select></label> : null}
             </div>
@@ -206,8 +210,8 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
                   <DesktopMemoryGraph nodes={atlas.nodes} edges={atlas.edges} displayMode="SEMANTIC" relationMode="RELATIONS" selectedNodeId={selectedNodeId} onSelectNode={selectNode} loading={loading || layoutPending} error={error} totalNodes={graph?.data.totalMatchingNodes ?? 0} totalEdges={graph?.data.totalMatchingEdges ?? 0} truncated={graph?.data.truncated ?? false} atlasPositions={atlasPositions} showTitles={showTitles} />
                 </Suspense>
               </MemoryGraphErrorBoundary></div> : null}
-              {view3D ? <MemoryGraph3D nodes={atlas.nodes} edges={atlas.edges} positions={atlasPositions} coordinates={layout?.atlas === atlas ? layout.depth : EMPTY_DEPTH} preparedModel={archiveEnabled ? archive.state?.model : undefined} frame={archiveEnabled ? archive.state?.frame : undefined} benchmark={demo} showTitles={showTitles} selectedNodeId={selectedNodeId} onSelectNode={selectNode} loading={(archiveEnabled ? !archive.state : loading) || layoutPending} resetToken={reset3D} /> : null}
-              {view3D && (archive.error || error) ? <div role="alert">{archive.error || error}</div> : null}
+              {view3D ? <MemoryGraph3D nodes={atlas.nodes} edges={atlas.edges} positions={atlasPositions} coordinates={layout?.atlas === atlas ? layout.depth : EMPTY_DEPTH} preparedModel={archiveEnabled ? archive.state?.model : undefined} frame={archiveEnabled ? archive.state?.frame : undefined} benchmark={demo} showTitles={showTitles} selectedNodeId={selectedNodeId} onSelectNode={selectNode} onRendererModeChange={setRendererMode} loading={graphLoading} resetToken={reset3D} /> : null}
+              {view3D && graphError ? <div role="alert">{graphError}</div> : null}
             </div>
             {!selectedNodeId && displayGroups.length > 0 ? <aside className="memory-atlas-topics" aria-label="Map topics">
               <span className="memory-atlas-eyebrow">COLOR GUIDE</span>
@@ -216,7 +220,7 @@ export function MemoryWorkspace({ shellMode, onClose, initialMode = "calendar" }
             </aside> : null}
             {!selectedNodeId ? <aside className="memory-atlas-insight"><span className="memory-atlas-eyebrow">THE BIGGER PICTURE</span><strong>{atlas.semanticCount.toLocaleString()}</strong><p>semantic connections</p><small>Explore the links between your memories.</small><div className="memory-atlas-spectrum" /></aside> : null}
             {graph?.data.isStale ? <div className="memory-atlas-stale" role="status"><AlertTriangle aria-hidden="true" /> Snapshot awaiting refresh</div> : null}
-            {query && !loading && !error ? <div className="memory-atlas-search-status" role="status">{atlas.nodes.length ? `${atlas.nodes.length.toLocaleString()} matching nodes` : "No memories found. Try another search."}</div> : null}
+            {query && !graphLoading && !graphError ? <div className="memory-atlas-search-status" role="status">{atlas.nodes.length ? `${atlas.nodes.length.toLocaleString()} matching nodes` : "No memories found. Try another search."}</div> : null}
           </>
         )}
         {selectedNodeId ? <div className="memory-atlas-detail">

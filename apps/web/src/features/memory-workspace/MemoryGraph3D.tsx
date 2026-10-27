@@ -6,7 +6,10 @@ import { DEFAULT_MEMORY_CAMERA, memory3DVolumeRatio, projectMemoryPoint } from "
 import { isMemoryCoreLabel } from "./memory-graph-visuals.js";
 import { MemoryBenchmarkSession } from "./memory-3d-benchmark.js";
 
-type Props = ComponentProps<typeof MemoryGraphCanvas3D> & { frame?: Float32Array; preparedModel?: MemoryRenderModel; benchmark?: boolean };
+type Props = ComponentProps<typeof MemoryGraphCanvas3D> & {
+  frame?: Float32Array; preparedModel?: MemoryRenderModel; benchmark?: boolean;
+  onRendererModeChange?: (mode: "webgl2" | "fallback" | null) => void;
+};
 
 export function MemoryGraph3D(props: Props) {
   const { nodes, edges, positions, coordinates, showTitles, selectedNodeId, onSelectNode, loading, resetToken, frame: streamedFrame } = props;
@@ -17,6 +20,8 @@ export function MemoryGraph3D(props: Props) {
   const redrawRef = useRef<() => void>(() => {});
   const resizeRef = useRef<() => void>(() => {});
   const [mode, setMode] = useState<"probing" | "webgl2" | "fallback">("probing");
+  useEffect(() => { if (mode !== "probing") props.onRendererModeChange?.(mode); }, [mode, props.onRendererModeChange]);
+  useEffect(() => () => props.onRendererModeChange?.(null), [props.onRendererModeChange]);
   const [benchmarkResult, setBenchmarkResult] = useState("");
   const [benchmarkRunning, setBenchmarkRunning] = useState(false);
   const [benchmarkProgress, setBenchmarkProgress] = useState(0);
