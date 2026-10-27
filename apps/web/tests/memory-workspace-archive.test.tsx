@@ -17,11 +17,12 @@ vi.mock("../src/features/memory-workspace/useMemoryArchive.js", () => ({ useMemo
 vi.mock("../src/features/memory-workspace/DesktopMemoryGraph.js", () => ({ default: () => <div>Sample map</div> }));
 vi.mock("../src/features/memory-workspace/MemoryNodeDetail.js", () => ({ MemoryNodeDetail: ({ detail }: { detail: unknown }) =>
   <div aria-label="Memory node detail">{detail ? "Detail loaded" : "Loading detail"}</div> }));
-vi.mock("../src/features/memory-workspace/MemoryGraph3D.js", () => ({ MemoryGraph3D: ({ onRendererModeChange, onSelectNode }: {
-  onRendererModeChange?: (mode: "webgl2" | "fallback") => void; onSelectNode: (id: string) => void
+vi.mock("../src/features/memory-workspace/MemoryGraph3D.js", () => ({ MemoryGraph3D: ({ onRendererModeChange, onSelectNode, totalNodes, truncated }: {
+  onRendererModeChange?: (mode: "webgl2" | "fallback") => void; onSelectNode: (id: string) => void;
+  totalNodes?: number; truncated?: boolean
 }) => {
   useEffect(() => { onRendererModeChange?.(controls.mode); }, [onRendererModeChange]);
-  return <div>
+  return <div data-testid="graph-3d" data-total-nodes={totalNodes} data-truncated={truncated}>
     <button onClick={() => onSelectNode("memory:old")}>Open old node</button>
     <button onClick={() => onRendererModeChange?.("fallback")}>Simulate context loss</button>
     <button onClick={() => onRendererModeChange?.("webgl2")}>Simulate context restore</button>
@@ -53,6 +54,8 @@ describe("Memory workspace archive transitions", () => {
   it("does not enable archive fetching or layout in Canvas-only browsers", async () => {
     controls.mode = "fallback";
     await open3D();
+    expect(screen.getByTestId("graph-3d").getAttribute("data-total-nodes")).toBe("50000");
+    expect(screen.getByTestId("graph-3d").getAttribute("data-truncated")).toBe("true");
     expect((screen.getByRole("button", { name: "Load full 3D graph (up to 50,000)" }) as HTMLButtonElement).disabled).toBe(true);
     loadFull();
     expect(controls.archive.mock.calls.every(([enabled]) => enabled === false)).toBe(true);

@@ -37,6 +37,13 @@ describe("3D memory graph context recovery", () => {
     expect(onRendererModeChange).toHaveBeenLastCalledWith(null);
   });
 
+  it("reports matching archive nodes outside an already truncated overview", () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    render(<MemoryGraph3D {...props} nodes={graph.nodes.slice(0, 2000)} totalNodes={50000} truncated />);
+    expect(screen.getByRole("status").textContent).toContain("Showing 2,000 of 50,000 nodes.");
+    expect(screen.getByRole("status").textContent).toContain("Additional matching nodes are not shown.");
+  });
+
   it("switches to the capped renderer on context loss and reuploads the full model on restore", () => {
     const gl = { getExtension: () => null, getParameter: () => "test GPU" };
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(function (type) { return type === "webgl2" ? gl as unknown as WebGL2RenderingContext : null; });

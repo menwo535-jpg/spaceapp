@@ -8,6 +8,7 @@ import { MemoryBenchmarkSession } from "./memory-3d-benchmark.js";
 
 type Props = ComponentProps<typeof MemoryGraphCanvas3D> & {
   frame?: Float32Array; preparedModel?: MemoryRenderModel; benchmark?: boolean;
+  totalNodes?: number; truncated?: boolean;
   onRendererModeChange?: (mode: "webgl2" | "fallback" | null) => void;
 };
 
@@ -225,7 +226,7 @@ export function MemoryGraph3D(props: Props) {
     </div>
     {mode === "fallback" ? <>
       <MemoryGraphCanvas3D {...props} {...fallback} />
-      <p className="memory-3d-fallback-status" role="status">Graphics acceleration unavailable. Showing {fallback.nodes.length.toLocaleString("en-US")} of {nodes.length.toLocaleString("en-US")} nodes.</p>
+      <p className="memory-3d-fallback-status" role="status">Graphics acceleration unavailable. Showing {fallback.nodes.length.toLocaleString("en-US")} of {Math.max(nodes.length, props.totalNodes ?? nodes.length).toLocaleString("en-US")} nodes.{props.truncated || fallback.nodes.length < nodes.length ? " Additional matching nodes are not shown." : ""}</p>
     </> : null}
     {props.benchmark ? <aside className="memory-3d-benchmark" aria-label="3D performance benchmark">
       <button type="button" disabled={loading || mode !== "webgl2" || benchmarkRunning} onClick={benchmark}>{benchmarkRunning ? "Measuring 300 frames…" : "Benchmark 3D (300 frames)"}</button>
